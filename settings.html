@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - SGPM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .setting-group {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .tag {
+            background: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+        .tag-remove {
+            cursor: pointer;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .keyword-input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+        .keyword-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            flex: 1;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Rendered by app.js -->
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <h3 style="flex: 1; font-weight: 500;">System Settings</h3>
+            <div id="user-info" style="display: flex; gap: 10px; align-items: center;">
+                <button id="btnLogin" style="padding: 6px 12px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Login
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="content-area" style="padding: 20px;">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <h2>Cài đặt Hệ thống</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Quản lý các cấu hình chung của toàn hệ thống SGPM.</p>
+
+                <div class="setting-group">
+                    <h3 style="margin-bottom: 10px;">Webhook Keywords (Hoàn thành Task)</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9em;">
+                        Khi một lập trình viên push code lên Github, nếu Commit Message chứa một trong các từ khoá dưới đây, hệ thống sẽ tự động chuyển trạng thái của Task liên quan sang <b>Done</b> và điền <b>End Date</b>.
+                    </p>
+                    
+                    <div class="tag-container" id="keywordTagsContainer">
+                        <!-- Tags will be rendered here -->
+                        <span style="color: #666; font-style: italic;">Đang tải...</span>
+                    </div>
+
+                    <div class="keyword-input-wrapper">
+                        <input type="text" id="newKeywordInput" class="keyword-input" placeholder="Nhập từ khóa mới (VD: fix, resolved)...">
+                        <button id="btnAddKeyword" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500;">
+                            Thêm
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button id="btnSaveSettings" style="padding: 10px 20px; background: var(--primary-color); color: white; border: none; border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500; font-size: 1.1em; display: none;">
+                        💾 Lưu Cài Đặt
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Core App Logic -->
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - SGPM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Rendered by app.js -->
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <h3 style="flex: 1; font-weight: 500;">User Management</h3>
+            <div id="user-info" style="display: flex; gap: 10px; align-items: center;">
+                <button id="btnLogin" style="padding: 6px 12px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Login
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="list-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Quản lý Danh sách Thành viên</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="searchUserInput" placeholder="🔍 Tìm kiếm thành viên (Tên, Email)..." class="grid-input" style="width: 280px; padding: 8px 12px; border-radius: 20px;">
+                        <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" style="display: none;">
+                        <button id="btnImportCsv" style="padding: 8px 16px; background: white; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 5px;">
+                            📥 Nhập từ Excel
+                        </button>
+                        <button id="btnSaveAll" style="padding: 8px 16px; background: #673AB7; color: white; border: none; border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500; display: none;">
+                            Lưu Tất Cả Các Dòng Bị Đổi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Grid Table -->
+                <div class="table-container">
+                    <table class="data-grid" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%;">THÔNG TIN CHUNG (EMAIL/TÊN)</th>
+                                <th style="width: 25%;">QUYỀN HẠN</th>
+                                <th style="width: 25%;">NGÀY TẠO</th>
+                                <th style="width: 15%; text-align: center;">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userListBody">
+                            <!-- Inline Add Row (Always First) -->
+                            <tr class="add-row">
+                                <td>
+                                    <input type="email" id="newEmail" placeholder="Email" class="grid-input" style="margin-bottom: 5px;">
+                                    <input type="text" id="newName" placeholder="Tên thành viên" class="grid-input">
+                                </td>
+                                <td>
+                                    <select id="newRole" class="grid-select">
+                                        <option value="student">Student</option>
+                                        <option value="teacher">Teacher</option>
+                                        <option value="super_admin">Super Admin</option>
+                                    </select>
+                                </td>
+                                <td><span style="color: var(--text-secondary); font-size: 0.85em;">Tự động tạo</span></td>
+                                <td style="text-align: center;">
+                                    <button id="btnInlineAdd" class="icon-btn" title="Thêm mới">+</button>
+                                </td>
+                            </tr>
+                            <!-- Data rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/users.js"></script>
+</body>
+</html>

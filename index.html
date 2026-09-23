@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Game Project Manager</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Rendered by app.js -->
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <h3 style="flex: 1; font-weight: 500;">Project: <span style="font-weight: 600;">Super Mario Clone</span></h3>
+            <div id="user-info" style="display: flex; gap: 10px; align-items: center;">
+                <span style="font-size: 0.9em; color: var(--text-secondary);">student@gmail.com</span>
+                <button id="btnLogin" style="padding: 6px 12px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Login
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="content-area" style="padding: 20px;">
+            <div style="display: flex; flex-direction: column; gap: 30px; max-width: 1200px; margin: 0 auto;">
+                
+                <!-- Section A: My Projects -->
+                <section>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="font-size: 1.5em; display: flex; align-items: center; gap: 10px;">
+                            📁 Dự án của tôi
+                        </h2>
+                    </div>
+                    
+                    <!-- Projects Grid -->
+                    <div id="myProjectsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                        <p style="color: var(--text-secondary);">Đang tải dự án...</p>
+                    </div>
+                </section>
+
+                <!-- Section B: My Tasks -->
+                <section>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="font-size: 1.5em; display: flex; align-items: center; gap: 10px;">
+                            📝 Công việc của tôi
+                        </h2>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="taskFilter" class="grid-select" style="width: auto; padding: 6px 12px; border-radius: 20px;">
+                                <option value="all">Tất cả</option>
+                                <option value="todo">To Do</option>
+                                <option value="inprogress">In Progress</option>
+                                <option value="done">Done</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tasks List -->
+                    <div id="myTasksContainer" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); box-shadow: var(--box-shadow-sm); overflow: hidden;">
+                        <div style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                            Tính năng Task đang được xây dựng (Giai đoạn 4)...
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

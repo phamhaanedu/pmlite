@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects - SGPM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .student-checkbox-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            padding: 10px;
+        }
+        .student-checkbox-list label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-weight: 400;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Rendered by app.js -->
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <h3 style="flex: 1; font-weight: 500;">Project Management</h3>
+            <div id="user-info" style="display: flex; gap: 10px; align-items: center;">
+                <button id="btnLogin" style="padding: 6px 12px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Login
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="list-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Quản lý Danh sách Dự án</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="projectFilter" class="grid-select" style="padding: 8px 12px; border-radius: 20px; font-weight: 500; border: 1px solid var(--border-color); display: none;">
+                            <option value="all">Tất cả các loại dự án</option>
+                            <option value="projects" selected>Dự án Đang chạy</option>
+                            <option value="projects_archived">Dự án Đã lưu trữ</option>
+                            <option value="projects_deleted">Thùng rác</option>
+                        </select>
+                        <select id="statusFilter" class="grid-select" style="padding: 8px 12px; border-radius: 20px; font-weight: 500; border: 1px solid var(--border-color);">
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <input type="text" id="searchProjectInput" placeholder="🔍 Tìm kiếm dự án..." class="grid-input" style="width: 250px; padding: 8px 12px; border-radius: 20px;">
+                        <button id="btnSaveAll" style="padding: 8px 16px; background: #673AB7; color: white; border: none; border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500; display: none;">
+                            Lưu Tất Cả Các Dòng Bị Đổi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Grid Table -->
+                <div class="table-container">
+                    <table class="data-grid" id="projectsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">THÔNG TIN DỰ ÁN</th>
+                                <th style="width: 40%;">NHÂN SỰ (PO / PM / DEVS)</th>
+                                <th style="width: 15%;">TRẠNG THÁI</th>
+                                <th style="width: 20%; text-align: center;">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectListBody">
+                            <!-- Inline Add Row -->
+                            <tr class="add-row" id="newProjectRow">
+                                <td style="vertical-align: top;">
+                                    <input type="text" id="newName" placeholder="Tên dự án" class="grid-input" style="margin-bottom: 5px; font-weight: 600;">
+                                    <textarea id="newDesc" placeholder="Mô tả dự án..." class="grid-input" style="resize: vertical; min-height: 40px;"></textarea>
+                                </td>
+                                <td style="vertical-align: top;">
+                                    <div style="display: flex; gap: 5px; flex-direction: column;">
+                                        <div style="display: flex; align-items: start; gap: 10px;">
+                                            <span style="font-size: 0.85em; font-weight: 600; width: 40px; margin-top: 5px;">PO:</span>
+                                            <div style="flex: 1;">
+                                                <div class="chip-container" id="newPOContainer"></div>
+                                                <button type="button" class="btn-picker" data-picker-type="po" data-row-id="new" style="padding: 2px 8px; font-size: 0.8em; width: auto; display: inline-block;">+ Chọn PO</button>
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; align-items: start; gap: 10px; margin-top: 5px;">
+                                            <span style="font-size: 0.85em; font-weight: 600; width: 40px; margin-top: 5px;">PM:</span>
+                                            <div style="flex: 1;">
+                                                <div class="chip-container" id="newPMContainer"></div>
+                                                <button type="button" class="btn-picker" data-picker-type="pm" data-row-id="new" style="padding: 2px 8px; font-size: 0.8em; width: auto; display: inline-block;">+ Chọn PM</button>
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; align-items: start; gap: 10px; margin-top: 5px;">
+                                            <span style="font-size: 0.85em; font-weight: 600; width: 40px; margin-top: 5px;">Devs:</span>
+                                            <div style="flex: 1;">
+                                                <div class="chip-container" id="newDevsContainer"></div>
+                                                <button type="button" class="btn-picker" data-picker-type="dev" data-row-id="new" style="padding: 2px 8px; font-size: 0.8em; width: auto; display: inline-block;">+ Thêm Dev</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="vertical-align: top;">
+                                    <span class="badge badge-success" style="margin-top: 5px; display: inline-block;">ACTIVE</span>
+                                </td>
+                                <td style="text-align: center; vertical-align: middle;">
+                                    <button id="btnInlineAdd" class="icon-btn" title="Tạo dự án mới" style="background: var(--primary-color); color: white; border-radius: 4px; padding: 6px 12px; font-weight: 500; font-size: 0.9em; width: 100%;">Tạo Dự Án</button>
+                                </td>
+                            </tr>
+                            <!-- Data rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- User Picker Modal -->
+    <div id="userPickerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="pickerModalTitle">Chọn User</h3>
+                <button type="button" class="close-modal" id="closePickerBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="pickerSearchInput" placeholder="Tìm kiếm theo tên hoặc email..." style="width:100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); margin-bottom: 15px;">
+                <div class="picker-list" id="pickerResults">
+                    <!-- Search results here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/projects.js"></script>
+</body>
+</html>
