@@ -20,6 +20,7 @@ const pickerModalTitle = document.getElementById("pickerModalTitle");
 let allUsers = [];
 let allTeachers = [];
 let allStudents = [];
+let allTemplates = [];
 
 // Track selections for each row (including 'new' row)
 // Format: { 'rowId': { po: null, pm: null, devs: [] } }
@@ -61,6 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 1. Fetch Users first so we can map IDs to names when rendering projects
     await loadUsersForDropdowns();
+    await loadTemplatesForDropdown();
     
     // 2. Load Projects and render Grid
     if (currentUserProfile) {
@@ -147,47 +149,32 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
             // Nếu có dùng Template, tạo sẵn các Tasks (Use cases)
-            if (template === "game_casual" || template === "game_rpg") {
-                let defaultTasks = [];
-                if (template === "game_casual") {
-                    defaultTasks = [
-                        { name: "Thiết kế Game Loop cơ bản (Core Mechanic)", category: "Game Design", sprint: "Sprint 1", tags: ["core", "design"] },
-                        { name: "Vẽ UI Main Menu & Gameplay", category: "Art/UI", sprint: "Sprint 1", tags: ["ui", "2d"] },
-                        { name: "Code Controller Nhân vật (Di chuyển)", category: "Programming", sprint: "Sprint 2", tags: ["controller"] },
-                        { name: "Tích hợp mảng mâm Audio/SFX", category: "Audio", sprint: "Sprint 2", tags: ["sfx"] }
-                    ];
-                } else if (template === "game_rpg") {
-                    defaultTasks = [
-                        { name: "Xây dựng Cốt truyện & Tuyến NV (GDD)", category: "Game Design", sprint: "Sprint 1", tags: ["story", "gdd"] },
-                        { name: "Dựng Model 3D Main Character", category: "3D Art", sprint: "Sprint 1", tags: ["3d", "character"] },
-                        { name: "Code Hệ thống Inventory (Túi đồ)", category: "Programming", sprint: "Sprint 2", tags: ["system"] },
-                        { name: "Code Hệ thống Combat & Skills", category: "Programming", sprint: "Sprint 2", tags: ["combat"] },
-                        { name: "Thiết kế Level/Map đầu tiên", category: "Level Design", sprint: "Sprint 3", tags: ["map"] }
-                    ];
-                }
-
-                defaultTasks.forEach(task => {
-                    const taskRef = doc(collection(db, "tasks"));
-                    const randomCode = Math.floor(1000 + Math.random() * 9000);
-                    batch.set(taskRef, {
-                        displayId: `#TASK-${randomCode}`,
-                        projectId: newProjRef.id,
-                        name: task.name,
-                        category: task.category,
-                        sprint: task.sprint,
-                        tags: task.tags,
-                        status: "todo",
-                        assigneeIds: [],
-                        branch: "",
-                        commitUrl: "",
-                        commits: [],
-                        startDate: "",
-                        deadline: "",
-                        endDate: "",
-                        note: "",
-                        createdAt: new Date()
+            if (template) {
+                const selectedTemplate = allTemplates.find(t => t.id === template);
+                if (selectedTemplate && selectedTemplate.tasks && Array.isArray(selectedTemplate.tasks)) {
+                    selectedTemplate.tasks.forEach(task => {
+                        const taskRef = doc(collection(db, "tasks"));
+                        const randomCode = Math.floor(1000 + Math.random() * 9000);
+                        batch.set(taskRef, {
+                            displayId: `#TASK-${randomCode}`,
+                            projectId: newProjRef.id,
+                            name: task.name,
+                            category: task.category || "",
+                            sprint: "Sprint 1",
+                            tags: [],
+                            status: "todo",
+                            assigneeIds: [],
+                            branch: "",
+                            commitUrl: "",
+                            commits: [],
+                            startDate: "",
+                            deadline: "",
+                            endDate: "",
+                            note: "",
+                            createdAt: new Date()
+                        });
                     });
-                });
+                }
             }
             
             await batch.commit();
@@ -267,6 +254,25 @@ async function loadUsersForDropdowns() {
         allStudents = allUsers; // Everyone can be PM or Dev now
     } catch (err) {
         console.error("Lỗi tải users: ", err);
+    }
+}
+
+async function loadTemplatesForDropdown() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "templates"));
+        allTemplates = querySnapshot.docs
+            .map(d => ({id: d.id, ...d.data()}))
+            .filter(t => t.status !== "deleted");
+        
+        const newTemplateSelect = document.getElementById("newTemplate");
+        if (newTemplateSelect) {
+            newTemplateSelect.innerHTML = `<option value="">(Tạo dự án trống - Không dùng Template)</option>`;
+            allTemplates.forEach(t => {
+                newTemplateSelect.innerHTML += `<option value="${t.id}">Template: ${t.name}</option>`;
+            });
+        }
+    } catch (err) {
+        console.error("Lỗi tải templates: ", err);
     }
 }
 
