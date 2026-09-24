@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Main CSS -->
     <link rel="stylesheet" href="css/style.css">
-</head>
+<script src=https://cdn.jsdelivr.net/npm/chart.js></script></head>
 <body>
 
     <!-- Sidebar -->
@@ -22,13 +22,8 @@
     <main class="main-content">
         <!-- Header -->
         <header class="header">
-            <h3 style="flex: 1; font-weight: 500;">Project: <span style="font-weight: 600;">Super Mario Clone</span></h3>
-            <div id="user-info" style="display: flex; gap: 10px; align-items: center;">
-                <span style="font-size: 0.9em; color: var(--text-secondary);">student@gmail.com</span>
-                <button id="btnLogin" style="padding: 6px 12px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Login
-                </button>
-            </div>
+            <h3 style="flex: 1; font-weight: 500;">Tổng quan (Dashboard)</h3>
+            
         </header>
 
         <!-- Content Area -->
@@ -46,6 +41,31 @@
                     <!-- Projects Grid -->
                     <div id="myProjectsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
                         <p style="color: var(--text-secondary);">Đang tải dự án...</p>
+                    </div>
+                </section>
+
+                <!-- Section: Teacher/Admin Dashboard (Hidden by default) -->
+                <section id="teacherDashboardSection" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="font-size: 1.5em; display: flex; align-items: center; gap: 10px; color: var(--primary-color);">
+                            📊 Tổng quan Giảng viên / Admin
+                        </h2>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <!-- Chart Card -->
+                        <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); box-shadow: var(--box-shadow-sm); padding: 20px;">
+                            <h3 style="margin-top: 0; font-size: 1.1em;">Thống kê Tiến độ Dự án</h3>
+                            <canvas id="projectProgressChart" style="max-height: 300px; width: 100%;"></canvas>
+                        </div>
+
+                        <!-- Leaderboard Card -->
+                        <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); box-shadow: var(--box-shadow-sm); padding: 20px;">
+                            <h3 style="margin-top: 0; font-size: 1.1em;">🏆 Leaderboard Sinh viên</h3>
+                            <div id="leaderboardContainer" style="max-height: 300px; overflow-y: auto;">
+                                <p style="color: var(--text-secondary);">Đang tải bảng xếp hạng...</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

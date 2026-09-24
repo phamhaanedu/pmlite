@@ -12,6 +12,7 @@ const newName = document.getElementById("newName");
 const newRole = document.getElementById("newRole");
 const newMssv = document.getElementById("newMssv");
 const newPhone = document.getElementById("newPhone");
+const newTelegramId = document.getElementById("newTelegramId");
 
 document.addEventListener("DOMContentLoaded", () => {
     loadUsers();
@@ -53,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const role = newRole.value;
         const mssv = newMssv.value.trim();
         const phone = newPhone.value.trim();
+        const telegramId = newTelegramId ? newTelegramId.value.trim() : "";
 
         if (!email || !name) {
             alert("Vui lòng nhập Email và Tên");
@@ -74,13 +76,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const newUserRef = doc(collection(db, "users"));
+            const newUserRef = doc(db, "users", email);
             await setDoc(newUserRef, {
                 email: email,
                 fullName: name,
                 role: role,
                 mssv: mssv,
                 phone: phone,
+                telegramId: telegramId,
                 status: "active",
                 createdAt: new Date()
             });
@@ -90,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
             newRole.value = "student";
             newMssv.value = "";
             newPhone.value = "";
+            if (newTelegramId) newTelegramId.value = "";
             
             if (window.logUserAction) window.logUserAction("Thêm thành viên mới");
             loadUsers(); // Refresh
@@ -117,6 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const roleInput = row.querySelector(".edit-role").value;
                 const mssvInput = row.querySelector(".edit-mssv").value.trim();
                 const phoneInput = row.querySelector(".edit-phone").value.trim();
+                const telegramIdInput = row.querySelector(".edit-telegramId") ? row.querySelector(".edit-telegramId").value.trim() : "";
 
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(emailInput)) {
@@ -132,7 +137,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         fullName: nameInput,
                         role: roleInput,
                         mssv: mssvInput,
-                        phone: phoneInput
+                        phone: phoneInput,
+                        telegramId: telegramIdInput
                     });
                 }
             });
@@ -199,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     continue;
                                 }
 
-                                const ref = doc(collection(db, "users"));
+                                const ref = doc(db, "users", email);
                                 await setDoc(ref, {
                                     email, fullName: name, role, createdAt: new Date()
                                 });
@@ -307,9 +313,10 @@ async function loadUsers() {
                         ${statusBadge}
                     </div>
                     <input type="text" class="grid-input edit-name" value="${u.fullName || ''}" data-original="${u.fullName || ''}" style="margin-bottom: 5px;">
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" class="grid-input edit-mssv" value="${u.mssv || ''}" data-original="${u.mssv || ''}" placeholder="MSSV">
-                        <input type="text" class="grid-input edit-phone" value="${u.phone || ''}" data-original="${u.phone || ''}" placeholder="SĐT">
+                    <div style="display: flex; gap: 5px; margin-top: 5px;">
+                        <input type="text" class="grid-input edit-mssv" value="${u.mssv || ''}" data-original="${u.mssv || ''}" placeholder="MSSV" style="flex: 1;">
+                        <input type="text" class="grid-input edit-phone" value="${u.phone || ''}" data-original="${u.phone || ''}" placeholder="SĐT" style="flex: 1;">
+                        <input type="text" class="grid-input edit-telegramId" value="${u.telegramId || ''}" data-original="${u.telegramId || ''}" placeholder="Telegram ID" style="flex: 1;">
                     </div>
                 </td>
                 <td>
@@ -325,7 +332,8 @@ async function loadUsers() {
                     ${status === "active" ? `<button class="icon-btn btn-lock-row" title="Khóa tài khoản" style="color: var(--status-warning);">🔒</button>` : ''}
                     ${status === "locked" ? `<button class="icon-btn btn-unlock-row" title="Mở khóa tài khoản" style="color: var(--status-success);">🔓</button>` : ''}
                     ${status !== "deleted" ? `<button class="icon-btn btn-delete-row" title="Xóa mềm tài khoản" style="color: var(--status-danger);">🗑️</button>` : ''}
-                    ${status === "deleted" ? `<button class="icon-btn" title="Chức năng chưa phát triển, sau này làm sau" style="color: #999; cursor: not-allowed;" disabled>🗑️ (Xóa vĩnh viễn)</button>` : ''}
+                    ${status === "deleted" ? `<button class="icon-btn btn-restore-row" title="Khôi phục tài khoản" style="color: var(--status-success);">♻️</button>
+                    <button class="icon-btn btn-hard-delete-row" title="Xóa vĩnh viễn (Cảnh báo: Không thể hoàn tác)" style="color: red; margin-left: 5px;">⚠️</button>` : ''}
                 </td>
             `;
 
@@ -371,6 +379,7 @@ async function loadUsers() {
                 const roleInput = tr.querySelector(".edit-role").value;
                 const mssvInput = tr.querySelector(".edit-mssv").value.trim();
                 const phoneInput = tr.querySelector(".edit-phone").value.trim();
+                const telegramIdInput = tr.querySelector(".edit-telegramId") ? tr.querySelector(".edit-telegramId").value.trim() : "";
                 
                 try {
                     // Check nếu email bị đổi thì có trùng email khác không
@@ -389,7 +398,8 @@ async function loadUsers() {
                         fullName: nameInput,
                         role: roleInput,
                         mssv: mssvInput,
-                        phone: phoneInput
+                        phone: phoneInput,
+                        telegramId: telegramIdInput
                     }, { merge: true });
                     
                     // Update originals
@@ -398,6 +408,7 @@ async function loadUsers() {
                     tr.querySelector(".edit-role").dataset.original = roleInput;
                     tr.querySelector(".edit-mssv").dataset.original = mssvInput;
                     tr.querySelector(".edit-phone").dataset.original = phoneInput;
+                    if(tr.querySelector(".edit-telegramId")) tr.querySelector(".edit-telegramId").dataset.original = telegramIdInput;
                     
                     checkDirty(); // will remove dirty class
                     if (window.logUserAction) window.logUserAction("Cập nhật thông tin thành viên");
@@ -446,6 +457,37 @@ async function loadUsers() {
                             loadUsers();
                         } catch(e) {
                             alert("Lỗi: " + e.message);
+                        }
+                    }
+                });
+            }
+
+            const hardDelBtn = tr.querySelector('.btn-hard-delete-row');
+            const restoreBtn = tr.querySelector('.btn-restore-row');
+
+            if(hardDelBtn) {
+                hardDelBtn.addEventListener("click", async () => {
+                    if(confirm(`CẢNH BÁO NGUY HIỂM: Xóa vĩnh viễn user ${u.email}?\nToàn bộ dữ liệu của user này sẽ biến mất vĩnh viễn và không thể khôi phục!`)) {
+                        try {
+                            await deleteDoc(doc(db, "users", id));
+                            if (window.logUserAction) window.logUserAction("Xóa vĩnh viễn tài khoản");
+                            loadUsers();
+                        } catch(e) {
+                            alert("Lỗi khi xóa vĩnh viễn: " + e.message);
+                        }
+                    }
+                });
+            }
+
+            if(restoreBtn) {
+                restoreBtn.addEventListener("click", async () => {
+                    if(confirm(`Khôi phục tài khoản ${u.email}?`)) {
+                        try {
+                            await setDoc(doc(db, "users", id), { status: "active" }, { merge: true });
+                            if (window.logUserAction) window.logUserAction("Khôi phục tài khoản");
+                            loadUsers();
+                        } catch(e) {
+                            alert("Lỗi khôi phục: " + e.message);
                         }
                     }
                 });

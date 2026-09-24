@@ -1,4 +1,4 @@
-import { db, collection, getDocs, doc, setDoc, writeBatch, deleteDoc, getDoc, query, where } from './firebase-config.js';
+import { db, collection, getDocs, doc, setDoc, writeBatch, deleteDoc, getDoc, query, where, or } from './firebase-config.js';
 import { currentUserProfile as appUserProfile } from './app.js';
 
 const projectListBody = document.getElementById("projectListBody");
@@ -50,6 +50,7 @@ function setupAdminFilter(profile) {
 document.addEventListener("UserLoaded", async (e) => {
     currentUserProfile = e.detail;
     setupAdminFilter(currentUserProfile);
+    await loadProjects(currentCollection);
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -62,7 +63,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadUsersForDropdowns();
     
     // 2. Load Projects and render Grid
-    await loadProjects(currentCollection);
+    if (currentUserProfile) {
+        await loadProjects(currentCollection);
+    }
 
     // 3. Setup Picker Modal logic
     setupPickerListeners();
@@ -107,6 +110,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     btnInlineAdd.addEventListener("click", async () => {
         const name = newNameInput.value.trim();
         const desc = newDescInput.value.trim();
+        const templateInput = document.getElementById("newTemplate");
+        const template = templateInput ? templateInput.value : "";
         
         const state = rowStates['new'];
         const teacherId = state.po ? state.po.id : "";
@@ -129,7 +134,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             btnInlineAdd.innerText = "Đang tạo...";
             
             const newProjRef = doc(collection(db, "projects"));
-            await setDoc(newProjRef, {
+            const batch = writeBatch(db);
+            
+            batch.set(newProjRef, {
                 name: name,
                 description: desc,
                 teacherId: teacherId,
@@ -138,10 +145,57 @@ document.addEventListener("DOMContentLoaded", async () => {
                 status: "active",
                 createdAt: new Date()
             });
+
+            // Nếu có dùng Template, tạo sẵn các Tasks (Use cases)
+            if (template === "game_casual" || template === "game_rpg") {
+                let defaultTasks = [];
+                if (template === "game_casual") {
+                    defaultTasks = [
+                        { name: "Thiết kế Game Loop cơ bản (Core Mechanic)", category: "Game Design", sprint: "Sprint 1", tags: ["core", "design"] },
+                        { name: "Vẽ UI Main Menu & Gameplay", category: "Art/UI", sprint: "Sprint 1", tags: ["ui", "2d"] },
+                        { name: "Code Controller Nhân vật (Di chuyển)", category: "Programming", sprint: "Sprint 2", tags: ["controller"] },
+                        { name: "Tích hợp mảng mâm Audio/SFX", category: "Audio", sprint: "Sprint 2", tags: ["sfx"] }
+                    ];
+                } else if (template === "game_rpg") {
+                    defaultTasks = [
+                        { name: "Xây dựng Cốt truyện & Tuyến NV (GDD)", category: "Game Design", sprint: "Sprint 1", tags: ["story", "gdd"] },
+                        { name: "Dựng Model 3D Main Character", category: "3D Art", sprint: "Sprint 1", tags: ["3d", "character"] },
+                        { name: "Code Hệ thống Inventory (Túi đồ)", category: "Programming", sprint: "Sprint 2", tags: ["system"] },
+                        { name: "Code Hệ thống Combat & Skills", category: "Programming", sprint: "Sprint 2", tags: ["combat"] },
+                        { name: "Thiết kế Level/Map đầu tiên", category: "Level Design", sprint: "Sprint 3", tags: ["map"] }
+                    ];
+                }
+
+                defaultTasks.forEach(task => {
+                    const taskRef = doc(collection(db, "tasks"));
+                    const randomCode = Math.floor(1000 + Math.random() * 9000);
+                    batch.set(taskRef, {
+                        displayId: `#TASK-${randomCode}`,
+                        projectId: newProjRef.id,
+                        name: task.name,
+                        category: task.category,
+                        sprint: task.sprint,
+                        tags: task.tags,
+                        status: "todo",
+                        assigneeIds: [],
+                        branch: "",
+                        commitUrl: "",
+                        commits: [],
+                        startDate: "",
+                        deadline: "",
+                        endDate: "",
+                        note: "",
+                        createdAt: new Date()
+                    });
+                });
+            }
+            
+            await batch.commit();
             
             // Reset Add form
             newNameInput.value = "";
             newDescInput.value = "";
+            if (templateInput) templateInput.value = "";
             rowStates['new'] = { po: null, pm: null, devs: [] };
             renderChipsForRow('new');
             
@@ -210,7 +264,7 @@ async function loadUsersForDropdowns() {
         allUsers = querySnapshot.docs.map(d => ({id: d.id, ...d.data()}));
         
         allTeachers = allUsers.filter(u => u.role === "teacher" || u.role === "super_admin");
-        allStudents = allUsers.filter(u => u.role === "student");
+        allStudents = allUsers; // Everyone can be PM or Dev now
     } catch (err) {
         console.error("Lỗi tải users: ", err);
     }
@@ -239,11 +293,23 @@ async function loadProjects(collectionName = 'projects') {
         if (collectionName === 'all') {
             const cols = ['projects', 'projects_archived', 'projects_deleted'];
             for (let c of cols) {
-                const qs = await getDocs(collection(db, c));
+                let q;
+                if (currentUserProfile.role === 'super_admin' || currentUserProfile.role === 'teacher') {
+                    q = collection(db, c);
+                } else {
+                    q = query(collection(db, c), or(where("pmId", "==", currentUserProfile.email), where("studentIds", "array-contains", currentUserProfile.email)));
+                }
+                const qs = await getDocs(q);
                 qs.forEach(docSnap => projectsArray.push({ id: docSnap.id, __col: c, ...docSnap.data() }));
             }
         } else {
-            const querySnapshot = await getDocs(collection(db, collectionName));
+            let q;
+            if (currentUserProfile.role === 'super_admin' || currentUserProfile.role === 'teacher') {
+                q = collection(db, collectionName);
+            } else {
+                q = query(collection(db, collectionName), or(where("pmId", "==", currentUserProfile.email), where("studentIds", "array-contains", currentUserProfile.email)));
+            }
+            const querySnapshot = await getDocs(q);
             querySnapshot.forEach(docSnap => projectsArray.push({ id: docSnap.id, __col: collectionName, ...docSnap.data() }));
         }
 
@@ -341,13 +407,20 @@ async function loadProjects(collectionName = 'projects') {
                 </td>
                 <td style="text-align: center; vertical-align: middle;">
                     <button class="icon-btn btn-save-row" title="Lưu dòng này" style="display: none;">💾</button>
-                    ${collectionName === 'projects' ? `
+                    ${p.__col === 'projects' ? `
                         <button class="icon-btn btn-archive-row" title="Lưu trữ dự án" style="color: #F57C00;">📦</button>
-                        <button class="icon-btn btn-delete-row" title="Xóa vào thùng rác" style="color: var(--status-danger);">🗑️</button>
-                    ` : `
+                        <button class="icon-btn btn-delete-row" title="Xóa mềm (Thùng rác)" style="color: var(--status-danger);">🗑️</button>
+                        <button class="icon-btn btn-go-tasks" title="Vào bảng Tasks" style="color: var(--primary-color);">📋</button>
+                    ` : ''}
+                    ${p.__col === 'projects_archived' ? `
                         <button class="icon-btn btn-restore-row" title="Khôi phục dự án" style="color: #4CAF50;">♻️</button>
-                    `}
-                    <button class="icon-btn" title="Vào bảng Tasks" style="color: var(--primary-color);">📋</button>
+                        <button class="icon-btn btn-delete-row" title="Xóa mềm (Thùng rác)" style="color: var(--status-danger);">🗑️</button>
+                        <button class="icon-btn btn-go-tasks" title="Vào bảng Tasks" style="color: var(--primary-color);">📋</button>
+                    ` : ''}
+                    ${p.__col === 'projects_deleted' ? `
+                        <button class="icon-btn btn-restore-row" title="Khôi phục dự án" style="color: #4CAF50;">♻️</button>
+                        <button class="icon-btn btn-hard-delete-row" title="Xóa vĩnh viễn (Không thể hoàn tác)" style="color: red; margin-left: 5px;">⚠️</button>
+                    ` : ''}
                 </td>
             `;
 
@@ -362,6 +435,7 @@ async function loadProjects(collectionName = 'projects') {
             const delBtn = tr.querySelector('.btn-delete-row');
             const archBtn = tr.querySelector('.btn-archive-row');
             const resBtn = tr.querySelector('.btn-restore-row');
+            const goTasksBtn = tr.querySelector('.btn-go-tasks');
             
             // Xử lý Dirty Row
             inputs.forEach(input => {
@@ -421,6 +495,13 @@ async function loadProjects(collectionName = 'projects') {
                 });
             }
 
+            // Go Tasks listener
+            if (goTasksBtn) {
+                goTasksBtn.addEventListener("click", () => {
+                    window.location.href = `tasks.html?projectId=${id}`;
+                });
+            }
+
             // Delete listener
             if (delBtn) {
                 delBtn.addEventListener("click", async () => {
@@ -435,6 +516,16 @@ async function loadProjects(collectionName = 'projects') {
                 resBtn.addEventListener("click", async () => {
                     if (confirm(`Bạn muốn Khôi phục dự án "${p.name}"?`)) {
                         await moveProjectTo(id, p.__col, 'projects');
+                    }
+                });
+            }
+
+            // Hard Delete listener
+            const hardDelBtn = tr.querySelector('.btn-hard-delete-row');
+            if (hardDelBtn) {
+                hardDelBtn.addEventListener("click", async () => {
+                    if (confirm(`CẢNH BÁO NGUY HIỂM: Xóa vĩnh viễn dự án "${p.name}"?\nToàn bộ Tasks (Use Cases) của dự án này cũng sẽ bị xóa vĩnh viễn và không thể khôi phục!`)) {
+                        await hardDeleteProject(id, p.__col);
                     }
                 });
             }
@@ -699,5 +790,35 @@ async function moveProjectTo(projectId, fromCol, toCol) {
     } catch (e) {
         console.error("Lỗi di chuyển dự án:", e);
         alert("Lỗi di chuyển dự án: " + e.message);
+    }
+}
+
+async function hardDeleteProject(projectId, fromCol) {
+    try {
+        const batch = writeBatch(db);
+        
+        // Delete project document
+        const pRef = doc(db, fromCol, projectId);
+        batch.delete(pRef);
+        
+        // Delete associated tasks
+        const taskCol = fromCol === 'projects' ? 'tasks' : (fromCol === 'projects_archived' ? 'tasks_archived' : 'tasks_deleted');
+        const q = query(collection(db, taskCol), where("projectId", "==", projectId));
+        const tasksSnap = await getDocs(q);
+        
+        tasksSnap.forEach(tDoc => {
+            batch.delete(tDoc.ref);
+        });
+        
+        await batch.commit();
+        if (window.logUserAction) window.logUserAction("Xóa vĩnh viễn Dự án");
+        alert("Đã xóa vĩnh viễn dự án và toàn bộ các task liên quan.");
+        
+        // Refresh grid
+        await loadProjects(currentCollection);
+        
+    } catch (e) {
+        console.error("Lỗi xóa vĩnh viễn dự án:", e);
+        alert("Lỗi xóa dự án: " + e.message);
     }
 }

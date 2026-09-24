@@ -46,6 +46,7 @@ document.addEventListener("UserLoaded", async (e) => {
     setupSearch();
     setupAssigneeModal();
     setupProjectDetailsActions();
+    setupAccordions();
 
     btnInlineAdd.addEventListener("click", async () => {
         const name = newTaskName.value.trim();
@@ -215,15 +216,12 @@ async function loadProjectDetails() {
                 document.querySelectorAll('.btn-edit-link').forEach(btn => btn.style.display = 'inline-block');
             }
             
-            // Access Control for Task Board Add Row
-            const addRow = document.querySelector('.add-row');
-            if (addRow && !isPMUser) {
-                addRow.style.display = 'none';
-            }
-            
             const uSnap = await getDocs(collection(db, "users"));
             const allUsers = {};
             uSnap.forEach(d => { allUsers[d.id] = d.data(); });
+            
+            // Render the new team roles panel
+            renderTeamRoles(p, allUsers);
             
             projectDevs = [];
             if (p.studentIds && Array.isArray(p.studentIds)) {
@@ -581,7 +579,8 @@ function renderTaskTable(tasksArray) {
                     <button class="icon-btn btn-save-row" title="Lưu thay đổi" style="display: none;">💾</button>
                     ${!t.isDeleted 
                         ? `<button class="icon-btn btn-delete-row" title="Xóa task" style="color: var(--status-danger);">🗑️</button>` 
-                        : `<button class="icon-btn btn-restore-row" title="Khôi phục task" style="color: #4CAF50;">♻️</button>`}
+                        : `<button class="icon-btn btn-restore-row" title="Khôi phục task" style="color: #4CAF50;">♻️</button>
+                           <button class="icon-btn btn-hard-delete-row" title="Xóa vĩnh viễn (Cảnh báo: Tác động đến Git)" style="color: red; margin-left: 5px;">⚠️</button>`}
                     <button class="icon-btn btn-toggle-details" title="Chi tiết" style="color: var(--primary-color);">🔽</button>
                 </td>
             `;
@@ -676,7 +675,10 @@ function renderTaskTable(tasksArray) {
                     tagsContainer.appendChild(tSpan);
                 });
                 
-                if (isPMUser) {
+                const isAssignee = t.assigneeIds && currentUserProfile && t.assigneeIds.includes(currentUserProfile.id);
+                const canEditFull = isPMUser || isAssignee;
+
+                if (canEditFull) {
                     const addBtn = document.createElement('button');
                     addBtn.textContent = "+ Tag";
                     addBtn.style = "background: transparent; color: var(--primary-color); border: 1px dashed var(--primary-color); border-radius: 4px; font-size: 0.75em; padding: 2px 6px; cursor: pointer;";
@@ -712,14 +714,15 @@ function renderTaskTable(tasksArray) {
             const detailInputs = trDetails.querySelectorAll('input:not([type="hidden"]), select');
             const allInputs = [...mainInputs, ...detailInputs];
             
-            // Lock fields for devs (except status & note)
-            if (!isPMUser) {
+            const isAssignee = t.assigneeIds && currentUserProfile && t.assigneeIds.includes(currentUserProfile.id);
+            const canEditFull = isPMUser || isAssignee;
+
+            // Lock fields for devs who are NOT assignees
+            if (!canEditFull) {
                 allInputs.forEach(input => {
-                    if (!input.classList.contains('edit-status') && !input.classList.contains('edit-note')) {
-                        input.disabled = true;
-                        input.style.background = "transparent";
-                        input.style.border = "none";
-                    }
+                    input.disabled = true;
+                    input.style.background = "transparent";
+                    input.style.border = "none";
                 });
             }
             
@@ -730,6 +733,14 @@ function renderTaskTable(tasksArray) {
             const saveBtn = trMain.querySelector('.btn-save-row');
             const delBtn = trMain.querySelector('.btn-delete-row');
             const resBtn = trMain.querySelector('.btn-restore-row');
+            const hardDelBtn = trMain.querySelector('.btn-hard-delete-row');
+            
+            // Non-PM users cannot delete or restore tasks
+            if (!isPMUser) {
+                if (delBtn) delBtn.style.display = 'none';
+                if (resBtn) resBtn.style.display = 'none';
+                if (hardDelBtn) hardDelBtn.style.display = 'none';
+            }
             
             const checkDirty = () => {
                 let isDirty = false;
@@ -752,8 +763,10 @@ function renderTaskTable(tasksArray) {
                     trDetails.style.background = "#fafafa";
                     trMain.style.background = trDetails.style.display === "none" ? (t.isDeleted ? "transparent" : (isLate ? "var(--status-danger-bg)" : "transparent")) : "#fafafa";
                     if (saveBtn) saveBtn.style.display = 'none';
-                    if (delBtn) delBtn.style.display = 'inline-block';
-                    if (resBtn) resBtn.style.display = 'inline-block';
+                    if (isPMUser) {
+                        if (delBtn) delBtn.style.display = 'inline-block';
+                        if (resBtn) resBtn.style.display = 'inline-block';
+                    }
                     if (document.querySelectorAll("#taskListBody tr.main-row.dirty-row").length === 0) {
                         btnSaveAll.style.display = 'none';
                     }
@@ -762,7 +775,33 @@ function renderTaskTable(tasksArray) {
 
             allInputs.forEach(input => {
                 input.addEventListener('input', checkDirty);
-                input.addEventListener('change', checkDirty);
+                input.addEventListener('change', async (e) => {
+                    checkDirty();
+                    
+                    // Auto-sync for Status
+                    if (input.classList.contains('edit-status')) {
+                        try {
+                            const ref = doc(db, "tasks", t.id);
+                            
+                            let endDate = t.endDate || "";
+                            if (input.value === "done" && t.status !== "done" && !endDate) {
+                                endDate = new Date().toISOString().split('T')[0];
+                            }
+                            
+                            await updateDoc(ref, {
+                                status: input.value,
+                                endDate: endDate,
+                                updatedAt: new Date()
+                            });
+                            // Tránh việc onSnapshot giật layout nếu không cần thiết
+                            input.dataset.original = input.value;
+                            checkDirty();
+                            if (window.logUserAction) window.logUserAction("Đổi trạng thái task thành " + input.value);
+                        } catch (err) {
+                            console.error("Lỗi khi auto-sync status:", err);
+                        }
+                    }
+                });
             });
 
             if (saveBtn) {
@@ -782,24 +821,17 @@ function renderTaskTable(tasksArray) {
                     const endInput = trDetails.querySelector(".edit-end").value;
                     const noteInput = trDetails.querySelector(".edit-note").value.trim();
                     
-                    if (!nameInput && isPMUser) { alert("Thiếu tên Use Case"); return; }
+                    if (!nameInput && canEditFull) { alert("Thiếu tên Use Case"); return; }
                     
                     try {
                         const ref = doc(db, "tasks", t.id);
                         
-                        let updateData = {};
-                        if (isPMUser) {
-                            updateData = { 
-                                name: nameInput, status: statusInput, branch: branchInput, assigneeIds: assignees, tags: tagsList,
-                                sprint: sprintInput, category: catInput, startDate: startInput, deadline: deadInput, endDate: endInput, note: noteInput,
-                                updatedAt: new Date() 
-                            };
-                        } else {
-                            updateData = {
-                                status: statusInput, note: noteInput, updatedAt: new Date()
-                            };
-                        }
-
+                        // PM and Devs can both update all fields
+                        let updateData = { 
+                            name: nameInput, status: statusInput, branch: branchInput, assigneeIds: assignees, tags: tagsList,
+                            sprint: sprintInput, category: catInput, startDate: startInput, deadline: deadInput, endDate: endInput, note: noteInput,
+                            updatedAt: new Date() 
+                        };
                         await updateDoc(ref, updateData);
                         
                         allInputs.forEach(input => input.dataset.original = input.value);
@@ -830,6 +862,29 @@ function renderTaskTable(tasksArray) {
                         await updateDoc(doc(db, "tasks", t.id), { isDeleted: false });
                     } catch (e) {
                         alert("Lỗi khôi phục: " + e.message);
+                    }
+                });
+            }
+
+            
+            if (hardDelBtn) {
+                hardDelBtn.addEventListener('click', async () => {
+                    // Check commits
+                    if (t.commits && t.commits.length > 0) {
+                        if (!confirm(`CẢNH BÁO RỦI RO GIT: Task "${t.name}" đã có ${t.commits.length} commit gắn liền.\nNếu xóa vĩnh viễn, bạn sẽ làm mất dữ liệu đối soát tiến độ của sinh viên (chỉ xóa trên hệ thống, không xóa trên Git).\nBạn có thực sự chắc chắn muốn xóa vĩnh viễn không?`)) {
+                            return;
+                        }
+                    } else {
+                        if (!confirm(`CẢNH BÁO NGUY HIỂM: Xóa vĩnh viễn task "${t.name}"?\nHành động này không thể hoàn tác.`)) {
+                            return;
+                        }
+                    }
+                    
+                    try {
+                        await deleteDoc(doc(db, "tasks", t.id));
+                        if (window.logUserAction) window.logUserAction("Xóa vĩnh viễn Task");
+                    } catch (e) {
+                        alert("Lỗi khi xóa vĩnh viễn: " + e.message);
                     }
                 });
             }
@@ -922,3 +977,136 @@ function setupSearch() {
     if(filterCategory) filterCategory.addEventListener("change", filterTasks);
     if(filterTag) filterTag.addEventListener("change", filterTasks);
 }
+
+
+function setupAccordions() {
+    const panels = [
+        { header: 'headerProjectInfo', content: 'contentProjectInfo', storageKey: 'sgpm_panel_projInfo' },
+        { header: 'headerTeamRoles', content: 'contentTeamRoles', storageKey: 'sgpm_panel_teamRoles' }
+    ];
+    
+    panels.forEach(p => {
+        const header = document.getElementById(p.header);
+        const content = document.getElementById(p.content);
+        if (!header || !content) return;
+        const icon = header.querySelector('.accordion-icon');
+        
+        const isCollapsed = localStorage.getItem(p.storageKey) === 'true';
+        if (isCollapsed) {
+            content.style.display = 'none';
+            if (icon) icon.style.transform = 'rotate(-90deg)';
+        }
+        
+        header.addEventListener('click', () => {
+            const currentlyCollapsed = content.style.display === 'none';
+            if (currentlyCollapsed) {
+                content.style.display = p.content === 'contentProjectInfo' ? 'flex' : 'block';
+                if (icon) icon.style.transform = 'rotate(0deg)';
+                localStorage.setItem(p.storageKey, 'false');
+            } else {
+                content.style.display = 'none';
+                if (icon) icon.style.transform = 'rotate(-90deg)';
+                localStorage.setItem(p.storageKey, 'true');
+            }
+        });
+    });
+}
+
+function renderTeamRoles(p, allUsers) {
+    const tbody = document.getElementById("teamRolesBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
+    const memberRoles = p.memberRoles || {};
+    const btnSaveTeamRoles = document.getElementById("btnSaveTeamRoles");
+    
+    const addRow = (uid, roleName) => {
+        if (!uid || !allUsers[uid]) return;
+        const user = allUsers[uid];
+        const currentDesc = memberRoles[uid] || "";
+        
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--border-color)";
+        
+        const tdName = document.createElement("td");
+        tdName.style.padding = "10px 0";
+        tdName.innerHTML = `<strong>${user.fullName}</strong><br><span style="font-size:0.85em;color:var(--text-secondary)">${user.email}</span>`;
+        
+        const tdRole = document.createElement("td");
+        tdRole.textContent = roleName;
+        tdRole.style.fontWeight = "600";
+        if (roleName === "PO") tdRole.style.color = "var(--status-done)";
+        if (roleName === "PM") tdRole.style.color = "var(--primary-color)";
+        
+        const tdDesc = document.createElement("td");
+        if (isPMUser) {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "grid-input";
+            input.style.width = "100%";
+            input.placeholder = "Nhập mô tả phân công...";
+            input.value = currentDesc;
+            input.dataset.uid = uid;
+            
+            input.addEventListener("input", () => {
+                input.classList.add("unsaved-input");
+                btnSaveTeamRoles.style.display = "inline-block";
+            });
+            tdDesc.appendChild(input);
+        } else {
+            tdDesc.textContent = currentDesc || "Chưa có mô tả";
+            tdDesc.style.color = currentDesc ? "inherit" : "var(--text-secondary)";
+        }
+        
+        tr.appendChild(tdName);
+        tr.appendChild(tdRole);
+        tr.appendChild(tdDesc);
+        tbody.appendChild(tr);
+    };
+    
+    if (p.poId) addRow(p.poId, "PO");
+    if (p.pmId) addRow(p.pmId, "PM");
+    
+    if (p.studentIds && Array.isArray(p.studentIds)) {
+        p.studentIds.forEach(id => {
+            if (id !== p.pmId && id !== p.poId) {
+                addRow(id, "Dev");
+            }
+        });
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // We attach this globally. Since btnSaveTeamRoles is in the DOM on load, it's safe.
+    const btnSaveTeamRoles = document.getElementById("btnSaveTeamRoles");
+    if (btnSaveTeamRoles) {
+        btnSaveTeamRoles.addEventListener("click", async (e) => {
+            e.stopPropagation(); // just in case
+            try {
+                const inputs = document.querySelectorAll("#teamRolesBody input");
+                const newMemberRoles = { ...(currentProjectObj.memberRoles || {}) };
+                inputs.forEach(inp => {
+                    newMemberRoles[inp.dataset.uid] = inp.value.trim();
+                });
+                
+                const pRef = doc(db, "projects", currentProjectId);
+                await updateDoc(pRef, {
+                    memberRoles: newMemberRoles
+                });
+                
+                if (window.logUserAction) window.logUserAction("Cập nhật phân công nhân sự");
+                alert("Đã lưu phân công thành công!");
+                btnSaveTeamRoles.style.display = 'none';
+                
+                // Remove unsaved highlighting
+                inputs.forEach(inp => inp.classList.remove("unsaved-input"));
+                
+                // Update local state so it doesn't revert if not reloaded
+                currentProjectObj.memberRoles = newMemberRoles;
+            } catch (err) {
+                console.error(err);
+                alert("Lỗi khi lưu phân công: " + err.message);
+            }
+        });
+    }
+});

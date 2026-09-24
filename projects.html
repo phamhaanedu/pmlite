@@ -35,12 +35,8 @@
     <main class="main-content">
         <!-- Header -->
         <header class="header">
-            <h3 style="flex: 1; font-weight: 500;">Project Management</h3>
-            <div id="user-info" style="display: flex; gap: 10px; align-items: center;">
-                <button id="btnLogin" style="padding: 6px 12px; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Login
-                </button>
-            </div>
+            <h3 style="flex: 1; font-weight: 500;">Danh sách Dự án</h3>
+            
         </header>
 
         <!-- Content Area -->
@@ -84,6 +80,11 @@
                             <tr class="add-row" id="newProjectRow">
                                 <td style="vertical-align: top;">
                                     <input type="text" id="newName" placeholder="Tên dự án" class="grid-input" style="margin-bottom: 5px; font-weight: 600;">
+                                    <select id="newTemplate" class="grid-select" style="margin-bottom: 5px; color: var(--primary-color); font-weight: 500;">
+                                        <option value="">(Tạo dự án trống - Không dùng Template)</option>
+                                        <option value="game_casual">Template: Game Casual (2D)</option>
+                                        <option value="game_rpg">Template: Game RPG (3D)</option>
+                                    </select>
                                     <textarea id="newDesc" placeholder="Mô tả dự án..." class="grid-input" style="resize: vertical; min-height: 40px;"></textarea>
                                 </td>
                                 <td style="vertical-align: top;">
