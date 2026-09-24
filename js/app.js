@@ -16,7 +16,7 @@ window.renderSidebar = async function(profile) {
     sidebar.style.display = 'flex';
 
     // Apply collapsed state from localStorage
-    const isCollapsed = localStorage.getItem("sgpm_sidebar_collapsed") === "true";
+    const isCollapsed = localStorage.getItem("pmlite_sidebar_collapsed") === "true";
     if (isCollapsed) {
         sidebar.classList.add("collapsed");
     } else {
@@ -56,6 +56,10 @@ window.renderSidebar = async function(profile) {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 <span class="nav-text">Members</span>
             </a>
+            <a href="templates.html" title="Templates" class="nav-link ${window.location.pathname.includes('templates.html') ? 'active' : ''}" style="opacity: ${window.location.pathname.includes('templates.html') ? '1' : '0.7'};">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span class="nav-text">Templates</span>
+            </a>
         `;
     } else if (profile.role === 'student' && isPM) {
         navHtml += `<a href="projects.html" title="Projects" class="nav-link ${isProj ? 'active' : ''}" style="opacity: ${isProj ? '1' : '0.7'};">
@@ -66,7 +70,7 @@ window.renderSidebar = async function(profile) {
 
     sidebar.innerHTML = `
         <div class="sidebar-header">
-            <h2 class="sidebar-title-text" style="margin: 0;">SGPM</h2>
+            <h2 class="sidebar-title-text" style="margin: 0;">PM Lite</h2>
             <button id="toggleSidebarBtn" class="toggle-btn">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
@@ -104,7 +108,7 @@ window.renderSidebar = async function(profile) {
         toggleBtn.addEventListener("click", () => {
             sidebar.classList.toggle("collapsed");
             const currentlyCollapsed = sidebar.classList.contains("collapsed");
-            localStorage.setItem("sgpm_sidebar_collapsed", currentlyCollapsed);
+            localStorage.setItem("pmlite_sidebar_collapsed", currentlyCollapsed);
         });
     }
 
@@ -124,6 +128,7 @@ window.renderSidebar = async function(profile) {
                 document.getElementById("profileFullName").value = profile.fullName || "";
                 document.getElementById("profileMssv").value = profile.mssv || "";
                 document.getElementById("profilePhone").value = profile.phone || "";
+                document.getElementById("profileTeleId").value = profile.teleId || "";
                 document.getElementById("profileEmail").value = profile.email || "";
                 
                 const btnSave = document.getElementById("btnSaveProfile");
@@ -314,6 +319,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             <input type="text" id="profilePhone" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-primary);">
                         </div>
                         <div class="form-group">
+                            <label>Telegram ID</label>
+                            <input type="text" id="profileTeleId" placeholder="Ví dụ: @username" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-primary);">
+                        </div>
+                        <div class="form-group">
                             <label>Email <small style="color: var(--text-secondary);">(Không thể thay đổi)</small></label>
                             <input type="email" id="profileEmail" readonly style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-secondary); opacity: 0.7;">
                         </div>
@@ -344,6 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const profileFullName = document.getElementById("profileFullName");
     const profileMssv = document.getElementById("profileMssv");
     const profilePhone = document.getElementById("profilePhone");
+    const profileTeleId = document.getElementById("profileTeleId");
     const btnSaveProfile = document.getElementById("btnSaveProfile");
 
     function checkProfileChanges() {
@@ -351,10 +361,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentFullName = profileFullName.value.trim();
         const currentMssv = profileMssv.value.trim();
         const currentPhone = profilePhone.value.trim();
+        const currentTeleId = profileTeleId.value.trim();
 
         const isChanged = currentFullName !== (currentUserProfile.fullName || "") ||
                           currentMssv !== (currentUserProfile.mssv || "") ||
-                          currentPhone !== (currentUserProfile.phone || "");
+                          currentPhone !== (currentUserProfile.phone || "") ||
+                          currentTeleId !== (currentUserProfile.teleId || "");
 
         if (isChanged) {
             btnSaveProfile.disabled = false;
@@ -372,6 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (profileFullName) profileFullName.addEventListener("input", checkProfileChanges);
     if (profileMssv) profileMssv.addEventListener("input", checkProfileChanges);
     if (profilePhone) profilePhone.addEventListener("input", checkProfileChanges);
+    if (profileTeleId) profileTeleId.addEventListener("input", checkProfileChanges);
 
     const profileForm = document.getElementById("profileForm");
 
@@ -390,19 +403,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const newFullName = document.getElementById("profileFullName").value.trim();
         const newMssv = document.getElementById("profileMssv").value.trim();
         const newPhone = document.getElementById("profilePhone").value.trim();
+        const newTeleId = document.getElementById("profileTeleId").value.trim();
 
         try {
             const userRef = doc(db, "users", currentUserProfile.id);
             await updateDoc(userRef, {
                 fullName: newFullName,
                 mssv: newMssv,
-                phone: newPhone
+                phone: newPhone,
+                teleId: newTeleId
             });
 
             // Update local profile
             currentUserProfile.fullName = newFullName;
             currentUserProfile.mssv = newMssv;
             currentUserProfile.phone = newPhone;
+            currentUserProfile.teleId = newTeleId;
 
             // Update UI
             const userNameSpan = document.getElementById("headerUserName");
@@ -464,8 +480,8 @@ function updateUIForLogout() {
         overlay.style.alignItems = "center";
         overlay.style.zIndex = "1000";
         overlay.innerHTML = `
-            <h1 style="color: var(--primary-color); font-size: 2.5rem; margin-bottom: 20px;">Welcome to SGPM</h1>
-            <p style="color: var(--text-secondary); font-size: 1.2rem; max-width: 600px; text-align: center; line-height: 1.5;">Hệ thống Quản lý Dự án Game. <br>Vui lòng đăng nhập để truy cập vào không gian làm việc của bạn.</p>
+            <h1 style="color: var(--primary-color); font-size: 2.5rem; margin-bottom: 20px;">Welcome to PM Lite</h1>
+            <p style="color: var(--text-secondary); font-size: 1.2rem; max-width: 600px; text-align: center; line-height: 1.5;">Hệ thống Quản lý Dự án. <br>Vui lòng đăng nhập để truy cập vào không gian làm việc của bạn.</p>
             <button id="welcomeLoginBtn" style="margin-top: 30px; padding: 12px 24px; font-size: 1.1rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: opacity 0.2s;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                 Đăng nhập với Google

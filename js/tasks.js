@@ -316,7 +316,7 @@ function setupAssigneeModal() {
         assigneeModal.style.display = 'none';
     });
 
-    btnConfirmAssignee.addEventListener('click', () => {
+    btnConfirmAssignee.addEventListener('click', async () => {
         const checkboxes = assigneeListContainer.querySelectorAll('input[type="checkbox"]:checked');
         const selectedIds = Array.from(checkboxes).map(cb => cb.value);
         
@@ -328,6 +328,60 @@ function setupAssigneeModal() {
 
         renderChips(selectedIds, currentEditingAssigneeContainer);
         assigneeModal.style.display = 'none';
+
+        // Debug alerts to trace execution
+        const trMain = currentEditingAssigneeInput.closest('tr');
+        if (trMain && !trMain.classList.contains('add-row')) {
+            const docId = trMain.dataset.id;
+            if (docId) {
+                try {
+                    const ref = doc(db, "tasks", docId);
+                    
+                    // Chỉ cập nhật assigneeIds (và updated)
+                    await updateDoc(ref, {
+                        assigneeIds: selectedIds,
+                        updatedAt: new Date()
+                    });
+                    
+                    // Cập nhật lại dataset.original để checkDirty() chạy đúng
+                    currentEditingAssigneeInput.dataset.original = currentEditingAssigneeInput.value;
+                    const btnSaveAll = document.getElementById('btnSaveAll');
+                    const allInputs = [
+                        ...Array.from(trMain.querySelectorAll('input, select')),
+                        ...(trMain.nextElementSibling && trMain.nextElementSibling.classList.contains('details-row') ? Array.from(trMain.nextElementSibling.querySelectorAll('input, select')) : [])
+                    ];
+                    let isDirty = false;
+                    allInputs.forEach(input => {
+                        if (input.value !== input.dataset.original) isDirty = true;
+                    });
+                    if (!isDirty) {
+                        trMain.classList.remove('dirty-row');
+                        trMain.style.background = "#fafafa";
+                        const saveBtn = trMain.querySelector('.btn-save-row');
+                        if (saveBtn) saveBtn.style.display = 'none';
+                        if (document.querySelectorAll("#taskListBody tr.main-row.dirty-row").length === 0 && btnSaveAll) {
+                            btnSaveAll.style.display = 'none';
+                        }
+                    }
+                    
+                    // Show success toast
+                    let toast = document.getElementById('toast-assignee');
+                    if (!toast) {
+                        toast = document.createElement('div');
+                        toast.id = 'toast-assignee';
+                        toast.style = 'position:fixed;bottom:20px;right:20px;background:#4CAF50;color:white;padding:10px 20px;border-radius:4px;z-index:9999;transition:opacity 0.3s;';
+                        document.body.appendChild(toast);
+                    }
+                    toast.textContent = "Đã lưu Assignee thành công!";
+                    toast.style.opacity = '1';
+                    setTimeout(() => toast.style.opacity = '0', 3000);
+                    
+                } catch (e) {
+                    console.error("Lỗi auto-save assignees:", e);
+                    alert("Lỗi Firebase: " + e.message);
+                }
+            }
+        }
     });
 
     searchAssigneeInput.addEventListener('input', (e) => {
@@ -981,8 +1035,8 @@ function setupSearch() {
 
 function setupAccordions() {
     const panels = [
-        { header: 'headerProjectInfo', content: 'contentProjectInfo', storageKey: 'sgpm_panel_projInfo' },
-        { header: 'headerTeamRoles', content: 'contentTeamRoles', storageKey: 'sgpm_panel_teamRoles' }
+        { header: 'headerProjectInfo', content: 'contentProjectInfo', storageKey: 'pmlite_panel_projInfo' },
+        { header: 'headerTeamRoles', content: 'contentTeamRoles', storageKey: 'pmlite_panel_teamRoles' }
     ];
     
     panels.forEach(p => {
