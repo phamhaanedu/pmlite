@@ -145,6 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             rowStates['new'] = { po: null, pm: null, devs: [] };
             renderChipsForRow('new');
             
+            if (window.logUserAction) window.logUserAction("Tạo Dự án mới");
             alert("Đã khởi tạo Dự án thành công!");
             await loadProjects(currentCollection); // refresh grid
             
@@ -193,6 +194,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
             await batch.commit();
+            if (window.logUserAction) window.logUserAction("Lưu thay đổi Dự Án");
             alert(`Đã lưu thành công ${dirtyRows.length} dự án!`);
             await loadProjects(currentCollection); // Refresh to clean dirty state
         } catch (err) {

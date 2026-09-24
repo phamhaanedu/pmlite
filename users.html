@@ -32,6 +32,12 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Quản lý Danh sách Thành viên</h2>
                     <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="statusFilter" class="grid-select" style="width: auto; padding: 8px; border-radius: 20px;">
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="active" selected>Hoạt động</option>
+                            <option value="locked">Bị khóa</option>
+                            <option value="deleted">Đã xóa mềm</option>
+                        </select>
                         <input type="text" id="searchUserInput" placeholder="🔍 Tìm kiếm thành viên (Tên, Email)..." class="grid-input" style="width: 280px; padding: 8px 12px; border-radius: 20px;">
                         <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" style="display: none;">
                         <button id="btnImportCsv" style="padding: 8px 16px; background: white; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 5px;">
@@ -48,10 +54,10 @@
                     <table class="data-grid" id="usersTable">
                         <thead>
                             <tr>
-                                <th style="width: 35%;">THÔNG TIN CHUNG (EMAIL/TÊN)</th>
-                                <th style="width: 25%;">QUYỀN HẠN</th>
-                                <th style="width: 25%;">NGÀY TẠO</th>
-                                <th style="width: 15%; text-align: center;">THAO TÁC</th>
+                                <th style="width: 35%;">THÔNG TIN CHUNG</th>
+                                <th style="width: 20%;">QUYỀN HẠN</th>
+                                <th style="width: 25%;">HOẠT ĐỘNG CUỐI</th>
+                                <th style="width: 20%; text-align: center;">THAO TÁC</th>
                             </tr>
                         </thead>
                         <tbody id="userListBody">
@@ -59,7 +65,11 @@
                             <tr class="add-row">
                                 <td>
                                     <input type="email" id="newEmail" placeholder="Email" class="grid-input" style="margin-bottom: 5px;">
-                                    <input type="text" id="newName" placeholder="Tên thành viên" class="grid-input">
+                                    <input type="text" id="newName" placeholder="Tên thành viên" class="grid-input" style="margin-bottom: 5px;">
+                                    <div style="display: flex; gap: 5px;">
+                                        <input type="text" id="newMssv" placeholder="MSSV" class="grid-input">
+                                        <input type="text" id="newPhone" placeholder="SĐT" class="grid-input">
+                                    </div>
                                 </td>
                                 <td>
                                     <select id="newRole" class="grid-select">

@@ -152,6 +152,7 @@ document.addEventListener("UserLoaded", async (e) => {
             });
 
             await batch.commit();
+            if (window.logUserAction) window.logUserAction("Lưu thay đổi nhiều Tasks");
             alert(`Đã lưu thành công ${dirtyRows.length} tasks!`);
             loadTasks(); 
         } catch (err) {

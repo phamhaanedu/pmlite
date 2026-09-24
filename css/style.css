@@ -30,6 +30,11 @@
   --box-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
 }
 
+/* User Profile Link */
+.user-profile-link:hover { 
+  text-decoration: underline; 
+  color: var(--primary-color) !important; 
+}
 * {
   box-sizing: border-box;
   margin: 0;
