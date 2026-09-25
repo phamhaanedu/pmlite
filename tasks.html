@@ -114,6 +114,24 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h2>Task Board</h2>
                     <div style="display: flex; gap: 10px; align-items: center;">
+                        <!-- VIEW TOGGLE BUTTONS -->
+                        <div class="view-toggle-group">
+                            <button id="btnViewList" class="view-toggle-btn active">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                List
+                            </button>
+                            <button id="btnViewKanban" class="view-toggle-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                                Kanban
+                            </button>
+                            <button id="btnViewMatrix" class="view-toggle-btn">
+                                ⌘ Matrix
+                            </button>
+                            <button id="btnViewGantt" class="view-toggle-btn">
+                                📊 Gantt
+                            </button>
+                        </div>
+
                         <button id="btnSaveAll"
                             style="padding: 8px 16px; background: #673AB7; color: white; border: none; border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500; display: none;">
                             Lưu Tất Cả Các Dòng Bị Đổi
@@ -129,9 +147,18 @@
                     <select id="filterStatus" class="grid-select"
                         style="padding: 6px 10px; border-radius: 20px; font-size: 0.9em;">
                         <option value="all">Tất cả Trạng thái</option>
+                        <option value="backlog">Backlog</option>
                         <option value="todo">To Do</option>
                         <option value="inprogress">In Progress</option>
                         <option value="done">Done</option>
+                    </select>
+                    <select id="filterPriority" class="grid-select"
+                        style="padding: 6px 10px; border-radius: 20px; font-size: 0.9em;">
+                        <option value="all">Tất cả Độ ưu tiên</option>
+                        <option value="urgent">🔴 Khẩn cấp</option>
+                        <option value="high">🟠 Cao</option>
+                        <option value="medium">🟡 Trung bình</option>
+                        <option value="low">🔵 Thấp</option>
                     </select>
                     <select id="filterAssignee" class="grid-select"
                         style="padding: 6px 10px; border-radius: 20px; font-size: 0.9em;">
@@ -152,13 +179,14 @@
                 </div>
 
                 <!-- Data Grid Table -->
-                <div class="table-container">
+                <div class="table-container" id="listViewContainer">
                     <table class="data-grid" id="tasksTable">
                         <thead>
                             <tr>
-                                <th style="width: 35%;">USE CASE (TÊN TASK)</th>
+                                <th style="width: 30%;">USE CASE (TÊN TASK)</th>
+                                <th style="width: 10%;">ƯU TIÊN</th>
                                 <th style="width: 15%;">TRẠNG THÁI</th>
-                                <th style="width: 25%;">ASSIGNEES</th>
+                                <th style="width: 20%;">ASSIGNEES</th>
                                 <th style="width: 15%;">BRANCH</th>
                                 <th style="width: 10%; text-align: center;">THAO TÁC</th>
                             </tr>
@@ -171,7 +199,16 @@
                                         class="grid-input" style="font-weight: 600;">
                                 </td>
                                 <td>
+                                    <select id="newTaskPriority" class="grid-select">
+                                        <option value="urgent">🔴 Khẩn cấp</option>
+                                        <option value="high">🟠 Cao</option>
+                                        <option value="medium" selected>🟡 Trung bình</option>
+                                        <option value="low">🔵 Thấp</option>
+                                    </select>
+                                </td>
+                                <td>
                                     <select id="newTaskStatus" class="grid-select">
+                                        <option value="backlog" selected>Backlog</option>
                                         <option value="todo">To Do</option>
                                         <option value="inprogress">In Progress</option>
                                         <option value="done">Done</option>
@@ -201,6 +238,80 @@
                             <!-- Dynamic rows will go here -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Kanban Board -->
+                <div id="kanbanViewContainer" style="display: none; padding-top: 10px; width: 100%;">
+                    <div class="kanban-board" >
+                        <!-- Backlog Column -->
+                        <div class="kanban-column" data-status="backlog" style="flex: 1; min-width: 280px; background: #f7f8fa; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid #9E9E9E; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <div class="kanban-column-header">
+                                <h4 class="kanban-column-title">📦 Backlog <span class="kanban-count" data-count="backlog" >0</span></h4>
+                            </div>
+                            <div class="kanban-dropzone" data-status="backlog" ></div>
+                        </div>
+
+                        <!-- To Do Column -->
+                        <div class="kanban-column" data-status="todo" style="flex: 1; min-width: 280px; background: #f7f8fa; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid #2196F3; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <div class="kanban-column-header">
+                                <h4 class="kanban-column-title">📋 To Do <span class="kanban-count" data-count="todo" >0</span></h4>
+                            </div>
+                            <div class="kanban-dropzone" data-status="todo" ></div>
+                        </div>
+
+                        <!-- In Progress Column -->
+                        <div class="kanban-column" data-status="inprogress" style="flex: 1; min-width: 280px; background: #f7f8fa; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid #FF9800; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <div class="kanban-column-header">
+                                <h4 class="kanban-column-title">⏳ In Progress <span class="kanban-count" data-count="inprogress" >0</span></h4>
+                            </div>
+                            <div class="kanban-dropzone" data-status="inprogress" ></div>
+                        </div>
+
+                        <!-- Done Column -->
+                        <div class="kanban-column" data-status="done" style="flex: 1; min-width: 280px; background: #f7f8fa; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; border-top: 4px solid #4CAF50; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <div class="kanban-column-header">
+                                <h4 class="kanban-column-title">✅ Done <span class="kanban-count" data-count="done" >0</span></h4>
+                            </div>
+                            <div class="kanban-dropzone" data-status="done" ></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gantt Chart View -->
+                <div id="ganttViewContainer" style="display: none; padding-top: 10px; width: 100%; min-height: 500px;">
+                    <div class="gantt-container-box">
+                        <div class="gantt-header-row">
+                            <div style="width: 250px; flex-shrink: 0;">USE CASE / TASK</div>
+                            <div style="flex: 1; position: relative;" id="ganttTimelineHeader">TIMELINE</div>
+                        </div>
+                        <div id="ganttChartBody" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    </div>
+                </div>
+
+                <!-- Priority Matrix View -->
+                <div id="matrixViewContainer" style="display: none; padding-top: 10px; width: 100%;">
+                    <div class="matrix-grid">
+                        <!-- Q1 -->
+                        <div class="matrix-quadrant matrix-q1">
+                            <h4 class="matrix-quadrant-title">🔥 Quan trọng & Khẩn cấp <span style="font-size: 0.8em; font-weight: normal;">(Làm ngay)</span></h4>
+                            <div id="matrix-q1" class="matrix-q-content"></div>
+                        </div>
+                        <!-- Q2 -->
+                        <div class="matrix-quadrant matrix-q2">
+                            <h4 class="matrix-quadrant-title">📅 Quan trọng & Không khẩn <span style="font-size: 0.8em; font-weight: normal;">(Lên lịch)</span></h4>
+                            <div id="matrix-q2" class="matrix-q-content"></div>
+                        </div>
+                        <!-- Q3 -->
+                        <div class="matrix-quadrant matrix-q3">
+                            <h4 class="matrix-quadrant-title">🤝 Ít quan trọng & Khẩn cấp <span style="font-size: 0.8em; font-weight: normal;">(Ủy quyền)</span></h4>
+                            <div id="matrix-q3" class="matrix-q-content"></div>
+                        </div>
+                        <!-- Q4 -->
+                        <div class="matrix-quadrant matrix-q4">
+                            <h4 class="matrix-quadrant-title">🗑️ Ít quan trọng & Không khẩn <span style="font-size: 0.8em; font-weight: normal;">(Backlog)</span></h4>
+                            <div id="matrix-q4" class="matrix-q-content"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -272,6 +383,99 @@
                 <button id="btnConfirmAssignee" class="btn-save"
                     style="padding: 8px 16px; background: var(--primary-color); color: white; border: none; cursor: pointer; border-radius: 4px;">Xác
                     nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban Task Modal -->
+    <div id="kanbanTaskModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; padding: 20px; border-radius: var(--border-radius-md); width: 600px; max-width: 90vw; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; flex: 1;">Chi tiết Task <span id="kanbanModalDisplayId" style="color: var(--primary-color); font-size: 0.8em; margin-left: 10px;"></span></h3>
+                <button id="btnCancelKanbanTask" style="background: transparent; border: none; font-size: 1.2em; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Tên Use Case</label>
+                    <input type="text" id="kanbanModalName" class="grid-input" style="width: 100%;">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Độ ưu tiên</label>
+                    <select id="kanbanModalPriority" class="grid-select" style="width: 100%;">
+                        <option value="urgent">🔴 Khẩn cấp</option>
+                        <option value="high">🟠 Cao</option>
+                        <option value="medium">🟡 Trung bình</option>
+                        <option value="low">🔵 Thấp</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Trạng thái</label>
+                    <select id="kanbanModalStatus" class="grid-select" style="width: 100%;">
+                        <option value="backlog">Backlog</option>
+                        <option value="todo">To Do</option>
+                        <option value="inprogress">In Progress</option>
+                        <option value="done">Done</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Branch</label>
+                    <input type="text" id="kanbanModalBranch" class="grid-input" style="width: 100%; font-family: monospace;">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Assignees</label>
+                    <div id="kanbanModalAssigneesContainer" style="display: flex; flex-wrap: wrap; gap: 5px; cursor: pointer; min-height: 32px; align-items: center; padding: 4px; border: 1px dashed var(--border-color); border-radius: 4px;"></div>
+                    <input type="hidden" id="kanbanModalAssignees" value="">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Tags</label>
+                    <div id="kanbanModalTagsContainer" style="display: flex; flex-wrap: wrap; gap: 5px; min-height: 32px; align-items: center;"></div>
+                    <input type="hidden" id="kanbanModalTags" value="">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Sprint</label>
+                    <input type="text" id="kanbanModalSprint" class="grid-input" style="width: 100%;">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Category</label>
+                    <input type="text" id="kanbanModalCategory" class="grid-input" style="width: 100%;">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Start Date</label>
+                    <input type="date" id="kanbanModalStart" class="grid-input" style="width: 100%;">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Deadline</label>
+                    <input type="date" id="kanbanModalDeadline" class="grid-input" style="width: 100%;">
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">End Date</label>
+                    <input type="date" id="kanbanModalEnd" class="grid-input" style="width: 100%;">
+                </div>
+                
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Ghi chú</label>
+                    <input type="text" id="kanbanModalNote" class="grid-input" style="width: 100%;">
+                </div>
+
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 0.85em; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 5px;">Lịch sử Commit</label>
+                    <div id="kanbanModalCommits" style="max-height: 80px; overflow-y: auto; font-size: 0.85em; border: 1px solid #eee; padding: 4px; border-radius: 4px; background: #fafafa;"></div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btnSaveKanbanTask" class="btn-save" style="padding: 8px 16px; background: var(--primary-color); color: white; border: none; cursor: pointer; border-radius: 4px; display: none;">Lưu Thay Đổi</button>
             </div>
         </div>
     </div>

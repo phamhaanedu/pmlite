@@ -6,7 +6,8 @@ const myProjectsContainer = document.getElementById("myProjectsContainer");
 document.addEventListener("UserLoaded", async (e) => {
     const profile = e.detail;
     if(profile) {
-        await loadMyProjects(profile);
+        const myProjects = await loadMyProjects(profile);
+        await loadMyTasks(profile, myProjects);
         
         // Hiện Dashboard Giảng viên / Admin
         if (profile.role === 'teacher' || profile.role === 'super_admin') {
@@ -21,10 +22,12 @@ document.addEventListener("UserLoaded", async (e) => {
 
 document.addEventListener("UserLoggedOut", () => {
     if(myProjectsContainer) myProjectsContainer.innerHTML = `<p style="color: var(--text-secondary);">Vui lòng đăng nhập để xem dự án.</p>`;
+    const myTasksContainer = document.getElementById("myTasksContainer");
+    if(myTasksContainer) myTasksContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">Vui lòng đăng nhập để xem công việc.</div>`;
 });
 
 async function loadMyProjects(profile) {
-    if(!myProjectsContainer) return;
+    if(!myProjectsContainer) return [];
     myProjectsContainer.innerHTML = `<p style="color: var(--text-secondary);">Đang tải dự án...</p>`;
     
     try {
@@ -53,7 +56,7 @@ async function loadMyProjects(profile) {
         
         if (myProjects.length === 0) {
             myProjectsContainer.innerHTML = `<p style="color: var(--text-secondary);">Bạn chưa tham gia dự án nào.</p>`;
-            return;
+            return [];
         }
         
         myProjectsContainer.innerHTML = "";
@@ -105,9 +108,155 @@ async function loadMyProjects(profile) {
             myProjectsContainer.appendChild(card);
         });
         
+        return myProjects;
     } catch (err) {
         console.error(err);
         myProjectsContainer.innerHTML = `<p style="color: red;">Lỗi tải dự án: ${err.message}</p>`;
+        return [];
+    }
+}
+
+async function loadMyTasks(profile, myProjects) {
+    const container = document.getElementById("myTasksContainer");
+    if (!container) return;
+    
+    container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">Đang tải công việc...</div>`;
+    
+    try {
+        // Hide the filter dropdown as it's no longer needed for minimalist Action Center
+        const filterSelect = document.getElementById("taskFilter");
+        if (filterSelect) {
+            filterSelect.style.display = "none";
+        }
+
+        const projectMap = {};
+        if (myProjects && myProjects.length > 0) {
+            myProjects.forEach(p => {
+                projectMap[p.id] = p.name;
+            });
+        }
+
+        // We fetch ALL projects in case the user has tasks in projects they are not directly members of (super_admin case or just global query)
+        const allProjectsSnap = await getDocs(collection(db, "projects"));
+        allProjectsSnap.forEach(doc => {
+             projectMap[doc.id] = doc.data().name;
+        });
+
+        // Query tasks assigned to this user
+        const qTasks = query(collection(db, "tasks"), where("assigneeIds", "array-contains", profile.id));
+        const tasksSnap = await getDocs(qTasks);
+        
+        let urgentTasks = [];
+        
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        tasksSnap.forEach(docSnap => {
+            const t = docSnap.data();
+            if (t.isDeleted || t.status === 'done') return;
+            
+            let isLate = false;
+            let isDueSoon = false;
+            let isUrgent = (t.priority === 'urgent');
+
+            if (t.deadline) {
+                const dl = new Date(t.deadline);
+                dl.setHours(0,0,0,0);
+                const diffTime = dl.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays < 0) {
+                    isLate = true;
+                } else if (diffDays <= 1) {
+                    isDueSoon = true;
+                }
+            }
+
+            if (isLate || isDueSoon || isUrgent) {
+                urgentTasks.push({
+                    id: docSnap.id,
+                    ...t,
+                    isLate,
+                    isDueSoon,
+                    isUrgentPriority: isUrgent
+                });
+            }
+        });
+
+        if (urgentTasks.length === 0) {
+            container.innerHTML = `<div style="padding: 30px 20px; text-align: center; color: var(--text-secondary); background: #f8f9fa; border-radius: 8px; border: 1px dashed var(--border-color);">
+                <div style="font-size: 2em; margin-bottom: 10px;">🎉</div>
+                <div style="font-weight: 500; color: var(--status-success);">Tuyệt vời!</div>
+                <div>Bạn không có công việc nào bị trễ hạn hay khẩn cấp.</div>
+            </div>`;
+            return;
+        }
+
+        // Sort: Late -> Due Soon -> Urgent
+        urgentTasks.sort((a, b) => {
+            if (a.isLate && !b.isLate) return -1;
+            if (!a.isLate && b.isLate) return 1;
+            if (a.isDueSoon && !b.isDueSoon) return -1;
+            if (!a.isDueSoon && b.isDueSoon) return 1;
+            if (a.isUrgentPriority && !b.isUrgentPriority) return -1;
+            if (!a.isUrgentPriority && b.isUrgentPriority) return 1;
+            
+            if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+            return 0;
+        });
+
+        // Take max 10 tasks to keep it minimal
+        urgentTasks = urgentTasks.slice(0, 10);
+
+        let html = `<table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--border-color); background: var(--background-color);">
+                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 40%;">Task cần chú ý</th>
+                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 25%;">Dự án</th>
+                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 20%;">Trạng thái báo động</th>
+                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 15%;">Hạn chót</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        urgentTasks.forEach(t => {
+            const pName = projectMap[t.projectId] || "Dự án không rõ";
+            
+            let alarmBadge = '';
+            if (t.isLate) alarmBadge = `<span class="badge" style="background: var(--status-danger); color: white;">🔴 Quá hạn</span>`;
+            else if (t.isDueSoon) alarmBadge = `<span class="badge" style="background: #ff9800; color: white;">🟠 Tới hạn</span>`;
+            else if (t.isUrgentPriority) alarmBadge = `<span class="badge" style="background: #e91e63; color: white;">🔥 Khẩn cấp</span>`;
+            
+            let deadlineStr = t.deadline ? t.deadline : "<span style='color: var(--text-secondary);'>Không có</span>";
+            let warningColor = t.isLate ? "color: var(--status-danger); font-weight: bold;" : (t.isDueSoon ? "color: #ff9800; font-weight: bold;" : "");
+
+            html += `
+                <tr style="border-bottom: 1px solid var(--border-color); cursor: pointer;" class="hover-row" onclick="window.location.href='tasks.html?projectId=${t.projectId}'">
+                    <td style="padding: 12px; font-weight: 500;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${t.name}
+                        </div>
+                    </td>
+                    <td style="padding: 12px; font-size: 0.9em; color: var(--text-secondary);">${pName}</td>
+                    <td style="padding: 12px;">${alarmBadge}</td>
+                    <td style="padding: 12px; ${warningColor}">${deadlineStr}</td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        
+        // Thêm hiệu ứng hover bằng JS
+        const rows = container.querySelectorAll('.hover-row');
+        rows.forEach(r => {
+            r.addEventListener('mouseenter', () => { r.style.background = 'var(--background-color)'; });
+            r.addEventListener('mouseleave', () => { r.style.background = 'transparent'; });
+        });
+
+    } catch (e) {
+        console.error("Lỗi khi tải công việc của tôi:", e);
+        container.innerHTML = `<div style="padding: 20px; text-align: center; color: red;">Lỗi tải dữ liệu.</div>`;
     }
 }
 
