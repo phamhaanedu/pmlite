@@ -483,6 +483,7 @@ async function loadTasks() {
             renderKanbanView(allTasks);
             if(typeof renderMatrixView === 'function') renderMatrixView(allTasks);
             if(typeof renderGanttView === 'function') renderGanttView(allTasks);
+              if(typeof renderOverviewView === 'function') renderOverviewView(allTasks);
         }, (error) => {
             console.error("Lỗi khi lắng nghe tasks: ", error);
         });
@@ -1253,6 +1254,10 @@ function setupViewToggle() {
     const btnViewKanban = document.getElementById("btnViewKanban");
     const btnViewMatrix = document.getElementById("btnViewMatrix");
     const btnViewGantt = document.getElementById("btnViewGantt");
+
+    const btnViewOverview = document.getElementById("btnViewOverview");
+    const overviewContainer = document.getElementById("overviewContainer");
+
     const ganttViewContainer = document.getElementById("ganttViewContainer");
     const listViewContainer = document.getElementById("listViewContainer");
     const kanbanViewContainer = document.getElementById("kanbanViewContainer");
@@ -1262,12 +1267,18 @@ function setupViewToggle() {
     btnViewList.addEventListener("click", () => {
         currentView = "list";
         listViewContainer.style.display = "block";
+          if(typeof overviewContainer !== "undefined" && overviewContainer) overviewContainer.style.display = "none";
+          const fb1 = document.getElementById("filterBarContainer"); if(fb1) fb1.style.display = "grid";
         kanbanViewContainer.style.display = "none";
         if(matrixViewContainer) matrixViewContainer.style.display = "none";
         if(ganttViewContainer) ganttViewContainer.style.display = "none";
         filterStatus.style.display = "inline-block";
         
-        btnViewList.classList.add('active'); btnViewKanban.classList.remove('active'); if(btnViewMatrix) btnViewMatrix.classList.remove('active'); if(btnViewGantt) btnViewGantt.classList.remove('active');
+        btnViewList.classList.add('active'); btnViewKanban.classList.remove('active'); if(btnViewMatrix) btnViewMatrix.classList.remove('active');
+ if(btnViewOverview) btnViewOverview.classList.remove('active'); if(btnViewGantt) btnViewGantt.classList.remove('active');
+ if(btnViewOverview) btnViewOverview.classList.remove('active');
+ if(btnViewOverview) btnViewOverview.classList.remove('active');
+ if(btnViewOverview) btnViewOverview.classList.remove('active');
         
         
         
@@ -1280,6 +1291,8 @@ function setupViewToggle() {
         if(matrixViewContainer) matrixViewContainer.style.display = "none";
         if(ganttViewContainer) ganttViewContainer.style.display = "none";
         kanbanViewContainer.style.display = "block";
+          if(typeof overviewContainer !== "undefined" && overviewContainer) overviewContainer.style.display = "none";
+          const fb2 = document.getElementById("filterBarContainer"); if(fb2) fb2.style.display = "grid";
         filterStatus.style.display = "none"; // Hide status filter in kanban view
         filterStatus.value = "all";
         filterTasks();
@@ -1293,9 +1306,12 @@ function setupViewToggle() {
     if(btnViewMatrix) {
         btnViewMatrix.addEventListener("click", () => {
             currentView = "matrix";
-            listViewContainer.style.display = "none";
-            kanbanViewContainer.style.display = "none";
+              listViewContainer.style.display = "none";
+              kanbanViewContainer.style.display = "none";
+              if(ganttViewContainer) ganttViewContainer.style.display = "none";
             matrixViewContainer.style.display = "block";
+              if(typeof overviewContainer !== "undefined" && overviewContainer) overviewContainer.style.display = "none";
+              const fb3 = document.getElementById("filterBarContainer"); if(fb3) fb3.style.display = "grid";
             filterStatus.style.display = "none"; 
             filterStatus.value = "all";
             filterTasks();
@@ -1307,6 +1323,27 @@ function setupViewToggle() {
             
         });
     }
+    
+    if(btnViewOverview) {
+        btnViewOverview.addEventListener("click", () => {
+            overviewContainer.style.display = "block";
+            listViewContainer.style.display = "none";
+            kanbanViewContainer.style.display = "none";
+            if(matrixViewContainer) matrixViewContainer.style.display = "none";
+            if(ganttViewContainer) ganttViewContainer.style.display = "none";
+            
+            // Hide task filters for overview
+            const filterBar = document.getElementById("filterBarContainer");
+            if(filterBar) filterBar.style.display = "none";
+
+            btnViewOverview.classList.add('active');
+            btnViewList.classList.remove('active');
+            btnViewKanban.classList.remove('active');
+            if(btnViewMatrix) btnViewMatrix.classList.remove('active');
+            if(btnViewGantt) btnViewGantt.classList.remove('active');
+        });
+    }
+
     if(btnViewGantt) {
         btnViewGantt.addEventListener("click", () => {
             currentView = "gantt";
@@ -1314,6 +1351,8 @@ function setupViewToggle() {
             kanbanViewContainer.style.display = "none";
             if(matrixViewContainer) matrixViewContainer.style.display = "none";
             ganttViewContainer.style.display = "block";
+              if(typeof overviewContainer !== "undefined" && overviewContainer) overviewContainer.style.display = "none";
+              const fb4 = document.getElementById("filterBarContainer"); if(fb4) fb4.style.display = "grid";
             filterStatus.style.display = "inline-block"; 
             filterTasks();
             
@@ -1720,12 +1759,45 @@ function renderMatrixView(tasksArray) {
         card.dataset.tags = JSON.stringify(t.tags || []);
         card.dataset.category = t.category || "";
         card.dataset.sprint = t.sprint || "";
-        card.style.cssText = `border-left: 3px solid ${t.status === 'backlog' ? '#9E9E9E' : t.status === 'todo' ? '#2196F3' : '#FF9800'};`;
+        
+/* PLACEHOLDER_CARD_BG */
+
         
         const taskPriority = t.priority || 'medium';
         const priorityIcon = taskPriority === 'urgent' ? '🔴' : taskPriority === 'high' ? '🟠' : taskPriority === 'low' ? '🔵' : '🟡';
         
-        let dateHtml = t.deadline ? `<span style="font-size: 0.75em; color: ${isUrgent ? 'var(--status-danger)' : '#666'};">⏱️ ${t.deadline}</span>` : '';
+        
+        let isLateBadge = false;
+        let isDueSoonBadge = false;
+        if (t.status !== 'done' && t.deadline) {
+            const dl = new Date(t.deadline);
+            dl.setHours(0,0,0,0);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const diffDays = Math.round((dl.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0) isLateBadge = true;
+            else if (diffDays <= 1) isDueSoonBadge = true;
+        }
+
+        let cardBg = 'white';
+        if (isLateBadge) cardBg = '#ffebee';
+        else if (isDueSoonBadge) cardBg = '#fff3e0';
+        
+        card.style.cssText = `border-left: 3px solid ${t.status === 'backlog' ? '#9E9E9E' : t.status === 'todo' ? '#2196F3' : '#FF9800'}; background-color: ${cardBg};`;
+
+        let badgeHtml = '';
+        if (isLateBadge) {
+            badgeHtml = '<span style="font-size: 0.7em; background: var(--status-danger); color: white; padding: 2px 4px; border-radius: 4px;">Trễ hạn</span>';
+        } else if (isDueSoonBadge) {
+            badgeHtml = '<span style="font-size: 0.7em; background: #F57C00; color: white; padding: 2px 4px; border-radius: 4px;">Tới hạn</span>';
+        }
+
+        let dateHtml = t.deadline ? `<span style="font-size: 0.75em; color: ${isUrgent ? 'var(--status-danger)' : '#666'};"><i class="fas fa-clock"></i> ${t.deadline}</span>` : '';
+        
+        if (badgeHtml !== '') {
+             dateHtml = badgeHtml; // Override dateHtml with badgeHtml if it's late or due soon
+        }
+
         
         const assigneesHtml = (t.assigneeIds || []).map(id => {
             const dev = projectDevs.find(d => d.id === id);
@@ -1814,13 +1886,31 @@ function renderGanttView(tasksArray) {
         let widthPct = Math.max(1, ((t._endMs - t._startMs) / totalMs) * 100);
         if (leftPct + widthPct > 100) widthPct = 100 - leftPct;
         
+        
         let color = '#2196F3'; // Todo
         if(t.status === 'done') color = '#4CAF50';
         else if(t.status === 'inprogress') color = '#FF9800';
         else if(t.status === 'backlog') color = '#9E9E9E';
         
-        const isLate = (t.status !== 'done' && t._endMs < Date.now());
+        let isLate = false;
+        let isDueSoon = false;
+        if (t.status !== 'done' && t.deadline) {
+            const dl = new Date(t.deadline);
+            dl.setHours(0,0,0,0);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const diffTime = dl.getTime() - today.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays < 0) {
+                isLate = true;
+            } else if (diffDays <= 1) {
+                isDueSoon = true;
+            }
+        }
+        
         if(isLate) color = '#F44336';
+        else if(isDueSoon) color = '#ff9800';
+
         
         const row = document.createElement('div');
         row.className = 'gantt-row gantt-row-item';
@@ -1854,4 +1944,170 @@ function renderGanttView(tasksArray) {
         
         body.appendChild(row);
     });
+}
+
+
+let projectOverviewChartInstance = null;
+
+function renderOverviewView(tasksArray) {
+    const chartCtx = document.getElementById('projectOverviewChart');
+    const memberStatsContainer = document.getElementById('projectMemberStats');
+    const urgentTasksContainer = document.getElementById('projectUrgentTasks');
+    
+    if (!chartCtx || !memberStatsContainer || !urgentTasksContainer) return;
+
+    let todo = 0, inprogress = 0, done = 0;
+    const memberStats = {};
+
+    projectDevs.forEach(dev => {
+        memberStats[dev.id] = { name: dev.fullName, total: 0, done: 0 };
+    });
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    let urgentTasks = [];
+
+    tasksArray.forEach(t => {
+        if (t.isDeleted) return;
+
+        // Chart counts
+        if (t.status === 'todo' || t.status === 'backlog') todo++;
+        else if (t.status === 'inprogress') inprogress++;
+        else if (t.status === 'done') done++;
+
+        // Member Stats
+        if (t.assigneeIds && t.assigneeIds.length > 0) {
+            t.assigneeIds.forEach(id => {
+                if (!memberStats[id]) memberStats[id] = { name: id, total: 0, done: 0 };
+                memberStats[id].total++;
+                if (t.status === 'done') memberStats[id].done++;
+            });
+        }
+
+        // Urgent Tasks for current user
+        if (t.status !== 'done') {
+            let isLate = false;
+            let isDueSoon = false;
+            let isUrgent = (t.priority === 'urgent');
+
+            if (t.deadline) {
+                const dl = new Date(t.deadline);
+                dl.setHours(0,0,0,0);
+                const diffTime = dl.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays < 0) {
+                    isLate = true;
+                } else if (diffDays <= 1) {
+                    isDueSoon = true;
+                }
+            }
+
+            if (isLate || isDueSoon || isUrgent) {
+                urgentTasks.push({ ...t, isLate, isDueSoon, isUrgentPriority: isUrgent });
+            }
+        }
+    });
+
+    // 1. Render Chart
+    if (projectOverviewChartInstance) {
+        projectOverviewChartInstance.destroy();
+    }
+    
+    if (todo === 0 && inprogress === 0 && done === 0) {
+         // Fallback if no tasks
+         todo = 1; 
+    }
+
+    projectOverviewChartInstance = new Chart(chartCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['To Do / Backlog', 'In Progress', 'Done'],
+            datasets: [{
+                data: [todo, inprogress, done],
+                backgroundColor: ['#e0e0e0', '#ff9800', '#4caf50'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // 2. Render Member Stats
+    const statsArray = Object.values(memberStats).sort((a,b) => b.done - a.done);
+    if (statsArray.length === 0) {
+        memberStatsContainer.innerHTML = '<span style="color: var(--text-secondary);">Chưa có thành viên nào.</span>';
+    } else {
+        memberStatsContainer.innerHTML = statsArray.map(stat => {
+            const pct = stat.total > 0 ? Math.round((stat.done / stat.total) * 100) : 0;
+            return `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--background-color); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="min-avatar" style="width: 32px; height: 32px; font-size: 0.9em; background: white;">${stat.name.charAt(0)}</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 500; font-size: 0.95em;">${stat.name}</span>
+                            <span style="font-size: 0.8em; color: var(--text-secondary);">${stat.done} / ${stat.total} Hoàn thành</span>
+                        </div>
+                    </div>
+                    <div style="font-weight: 600; color: ${pct === 100 ? 'var(--status-success)' : 'var(--primary-color)'}; font-size: 0.9em;">${pct}%</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 3. Render Urgent Tasks
+    if (urgentTasks.length === 0) {
+        urgentTasksContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-secondary); background: var(--background-color); border-radius: 8px;">
+            <div style="font-size: 1.5em; margin-bottom: 5px;">🎉</div>
+            <div>Tuyệt vời! Dự án không có công việc nào bị trễ hạn hay khẩn cấp.</div>
+        </div>`;
+    } else {
+        urgentTasks.sort((a, b) => {
+            if (a.isLate && !b.isLate) return -1;
+            if (!a.isLate && b.isLate) return 1;
+            if (a.isDueSoon && !b.isDueSoon) return -1;
+            if (!a.isDueSoon && b.isDueSoon) return 1;
+            if (a.isUrgentPriority && !b.isUrgentPriority) return -1;
+            if (!a.isUrgentPriority && b.isUrgentPriority) return 1;
+            return 0;
+        });
+
+        urgentTasksContainer.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <th style="padding: 10px; color: var(--text-secondary); font-weight: 500;">Task</th>
+                        <th style="padding: 10px; color: var(--text-secondary); font-weight: 500;">Trạng thái</th>
+                        <th style="padding: 10px; color: var(--text-secondary); font-weight: 500;">Hạn chót</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${urgentTasks.map(t => {
+                        let alarmBadge = '';
+                        if (t.isLate) alarmBadge = `<span class="badge" style="background: var(--status-danger); color: white;">🔴 Quá hạn</span>`;
+                        else if (t.isDueSoon) alarmBadge = `<span class="badge" style="background: #ff9800; color: white;">🟠 Tới hạn</span>`;
+                        else if (t.isUrgentPriority) alarmBadge = `<span class="badge" style="background: #e91e63; color: white;">🔥 Khẩn cấp</span>`;
+                        
+                        let warningColor = t.isLate ? "color: var(--status-danger); font-weight: bold;" : (t.isDueSoon ? "color: #ff9800; font-weight: bold;" : "");
+                        let dl = t.deadline ? t.deadline : 'Không có';
+
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 10px; font-weight: 500;">${t.name} <br><span style="font-size: 0.8em; color: var(--text-secondary); font-weight: normal;">👤 ${(t.assigneeIds && t.assigneeIds.length > 0) ? t.assigneeIds.length + ' người' : 'Chưa phân công'}</span></td>
+                                <td style="padding: 10px;">${alarmBadge}</td>
+                                <td style="padding: 10px; ${warningColor}">${dl}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    }
 }

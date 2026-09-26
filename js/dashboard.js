@@ -1,4 +1,4 @@
-import { db, collection, query, where, or, getDocs } from './firebase-config.js';
+import { db, collection, query, where, or, getDocs, doc, setDoc } from './firebase-config.js';
 import { currentUserProfile } from './app.js';
 
 const myProjectsContainer = document.getElementById("myProjectsContainer");
@@ -61,8 +61,69 @@ async function loadMyProjects(profile) {
         
         myProjectsContainer.innerHTML = "";
         
-        myProjects.forEach(p => {
-            // Render card
+        // Create New Project Card
+        const createNewProjectCard = () => {
+            const card = document.createElement("div");
+            card.style.background = "var(--surface-color)";
+            card.style.border = "1px dashed var(--text-secondary)";
+            card.style.borderRadius = "var(--border-radius-md)";
+            card.style.padding = "20px";
+            card.style.display = "flex";
+            card.style.flexDirection = "column";
+            card.style.justifyContent = "center";
+            card.style.alignItems = "center";
+            card.style.cursor = "pointer";
+            card.style.transition = "transform 0.2s, background 0.2s, border-color 0.2s";
+            
+            card.onmouseenter = () => {
+                card.style.transform = "translateY(-5px)";
+                card.style.background = "var(--background-color)";
+                card.style.border = "1px dashed var(--primary-color)";
+            };
+            card.onmouseleave = () => {
+                card.style.transform = "translateY(0)";
+                card.style.background = "var(--surface-color)";
+                card.style.border = "1px dashed var(--text-secondary)";
+            };
+            
+            card.onclick = async () => {
+                const projectName = prompt("Nhập tên Dự án mới:");
+                if (projectName && projectName.trim()) {
+                    try {
+                        card.innerHTML = "<div style='color: var(--primary-color);'>Đang tạo...</div>";
+                        const newProjRef = doc(collection(db, "projects"));
+                        await setDoc(newProjRef, {
+                            name: projectName.trim(),
+                            description: "",
+                            poId: profile.id, // Current user is PO
+                            pmId: profile.id, // Current user is PM
+                            studentIds: [profile.id], // Current user is automatically in student list
+                            createdAt: new Date(),
+                            status: "active"
+                        });
+                        // Also add an empty backlog lane placeholder logic if needed, but tasks view handles it
+                        window.location.reload(); // Reload to see the new project
+                    } catch (e) {
+                        alert("Lỗi: " + e.message);
+                        card.innerHTML = "<div style='color: red;'>Lỗi tạo dự án</div>";
+                    }
+                }
+            };
+            
+            card.innerHTML = `
+                <div style="font-size: 2em; margin-bottom: 10px; color: var(--text-secondary);">+</div>
+                <h3 style="margin: 0; font-size: 1.1em; font-weight: 600; color: var(--text-secondary);">Tạo dự án mới</h3>
+            `;
+            return card;
+        };
+
+        myProjectsContainer.appendChild(createNewProjectCard());
+
+        const MAX_PROJECTS = 5;
+        const projectsToRender = myProjects.slice(0, MAX_PROJECTS);
+
+        // Function to create a project card
+        const createProjectCard = (p) => {
             let roleStr = "Super Admin";
             if(p.isPO) roleStr = "Product Owner";
             else if(p.isPM) roleStr = "Project Manager";
@@ -105,8 +166,59 @@ async function loadMyProjects(profile) {
                     <span style="font-size: 0.85em; color: var(--text-secondary);">Tiến độ: 0%</span>
                 </div>
             `;
-            myProjectsContainer.appendChild(card);
+            return card;
+        };
+
+        
+        
+        projectsToRender.forEach(p => {
+            myProjectsContainer.appendChild(createProjectCard(p));
         });
+
+        // Add "View All" card if there are more projects
+        if (myProjects.length > MAX_PROJECTS) {
+            const extraCount = myProjects.length - MAX_PROJECTS;
+            const viewAllCard = document.createElement("div");
+            viewAllCard.style.background = "var(--background-color)";
+            viewAllCard.style.border = "1px dashed var(--primary-color)";
+            viewAllCard.style.borderRadius = "var(--border-radius-md)";
+            viewAllCard.style.padding = "20px";
+            viewAllCard.style.display = "flex";
+            viewAllCard.style.flexDirection = "column";
+            viewAllCard.style.justifyContent = "center";
+            viewAllCard.style.alignItems = "center";
+            viewAllCard.style.cursor = "pointer";
+            viewAllCard.style.transition = "transform 0.2s, background 0.2s";
+            viewAllCard.style.color = "var(--primary-color)";
+            
+            viewAllCard.onmouseenter = () => {
+                viewAllCard.style.transform = "translateY(-5px)";
+                viewAllCard.style.background = "#ede7f6"; // Light purple
+            };
+            viewAllCard.onmouseleave = () => {
+                viewAllCard.style.transform = "translateY(0)";
+                viewAllCard.style.background = "var(--background-color)";
+            };
+            
+            viewAllCard.onclick = () => {
+                // Remove the view all card
+                viewAllCard.remove();
+                
+                // Render the remaining projects inline
+                const remainingProjects = myProjects.slice(MAX_PROJECTS);
+                remainingProjects.forEach(p => {
+                    myProjectsContainer.appendChild(createProjectCard(p));
+                });
+            };
+            
+            viewAllCard.innerHTML = `
+                <div style="font-size: 2em; margin-bottom: 10px;">📁</div>
+                <h3 style="margin: 0; font-size: 1.1em; font-weight: 600;">Xem tất cả</h3>
+                <p style="margin-top: 5px; opacity: 0.8;">+${extraCount} dự án khác</p>
+            `;
+            
+            myProjectsContainer.appendChild(viewAllCard);
+        }
         
         return myProjects;
     } catch (err) {
@@ -136,53 +248,58 @@ async function loadMyTasks(profile, myProjects) {
             });
         }
 
-        // We fetch ALL projects in case the user has tasks in projects they are not directly members of (super_admin case or just global query)
-        const allProjectsSnap = await getDocs(collection(db, "projects"));
-        allProjectsSnap.forEach(doc => {
-             projectMap[doc.id] = doc.data().name;
-        });
+        // Only use myProjects (fixes student permission error)
 
-        // Query tasks assigned to this user
-        const qTasks = query(collection(db, "tasks"), where("assigneeIds", "array-contains", profile.id));
-        const tasksSnap = await getDocs(qTasks);
+                // Fetch all tasks for all projects the user is part of
+        let tasksPromises = [];
+        if (myProjects && myProjects.length > 0) {
+            const projectIds = myProjects.map(p => p.id);
+            // Firestore 'in' limit is 10
+            for (let i = 0; i < projectIds.length; i += 10) {
+                const chunk = projectIds.slice(i, i + 10);
+                tasksPromises.push(getDocs(query(collection(db, "tasks"), where("projectId", "in", chunk))));
+            }
+        }
         
+        const tasksSnaps = await Promise.all(tasksPromises);
         let urgentTasks = [];
-        
         const today = new Date();
         today.setHours(0,0,0,0);
 
-        tasksSnap.forEach(docSnap => {
-            const t = docSnap.data();
-            if (t.isDeleted || t.status === 'done') return;
-            
-            let isLate = false;
-            let isDueSoon = false;
-            let isUrgent = (t.priority === 'urgent');
-
-            if (t.deadline) {
-                const dl = new Date(t.deadline);
-                dl.setHours(0,0,0,0);
-                const diffTime = dl.getTime() - today.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        tasksSnaps.forEach(snap => {
+            snap.forEach(docSnap => {
+                const t = docSnap.data();
+                if (t.isDeleted || t.status === 'done') return;
                 
-                if (diffDays < 0) {
-                    isLate = true;
-                } else if (diffDays <= 1) {
-                    isDueSoon = true;
+                let isLate = false;
+                let isDueSoon = false;
+                let isUrgent = (t.priority === 'urgent');
+
+                if (t.deadline) {
+                    const dl = new Date(t.deadline);
+                    dl.setHours(0,0,0,0);
+                    const diffTime = dl.getTime() - today.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 0) {
+                        isLate = true;
+                    } else if (diffDays <= 1) {
+                        isDueSoon = true;
+                    }
                 }
-            }
 
-            if (isLate || isDueSoon || isUrgent) {
-                urgentTasks.push({
-                    id: docSnap.id,
-                    ...t,
-                    isLate,
-                    isDueSoon,
-                    isUrgentPriority: isUrgent
-                });
-            }
+                if (isLate || isDueSoon || isUrgent) {
+                    urgentTasks.push({
+                        id: docSnap.id,
+                        ...t,
+                        isLate,
+                        isDueSoon,
+                        isUrgentPriority: isUrgent
+                    });
+                }
+            });
         });
-
+        
         if (urgentTasks.length === 0) {
             container.innerHTML = `<div style="padding: 30px 20px; text-align: center; color: var(--text-secondary); background: #f8f9fa; border-radius: 8px; border: 1px dashed var(--border-color);">
                 <div style="font-size: 2em; margin-bottom: 10px;">🎉</div>
@@ -211,8 +328,8 @@ async function loadMyTasks(profile, myProjects) {
         let html = `<table style="width: 100%; border-collapse: collapse; text-align: left;">
             <thead>
                 <tr style="border-bottom: 1px solid var(--border-color); background: var(--background-color);">
-                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 40%;">Task cần chú ý</th>
-                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 25%;">Dự án</th>
+                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 35%;">Task cần chú ý</th>
+                    <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 20%;">Dự án</th>
                     <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 20%;">Trạng thái báo động</th>
                     <th style="padding: 12px; font-weight: 500; color: var(--text-secondary); width: 15%;">Hạn chót</th>
                 </tr>
@@ -230,11 +347,16 @@ async function loadMyTasks(profile, myProjects) {
             let deadlineStr = t.deadline ? t.deadline : "<span style='color: var(--text-secondary);'>Không có</span>";
             let warningColor = t.isLate ? "color: var(--status-danger); font-weight: bold;" : (t.isDueSoon ? "color: #ff9800; font-weight: bold;" : "");
 
+            const assigneesCount = (t.assigneeIds && t.assigneeIds.length > 0) ? t.assigneeIds.length + ' người' : 'Chưa phân công';
+
             html += `
                 <tr style="border-bottom: 1px solid var(--border-color); cursor: pointer;" class="hover-row" onclick="window.location.href='tasks.html?projectId=${t.projectId}'">
                     <td style="padding: 12px; font-weight: 500;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             ${t.name}
+                        </div>
+                        <div style="font-size: 0.8em; color: var(--text-secondary); margin-top: 4px;">
+                            👤 ${assigneesCount}
                         </div>
                     </td>
                     <td style="padding: 12px; font-size: 0.9em; color: var(--text-secondary);">${pName}</td>
