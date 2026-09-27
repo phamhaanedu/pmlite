@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Lite - System Alerts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .qa-tabs {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .qa-tab {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .qa-tab:hover {
+            background: var(--background-color);
+            color: var(--text-primary);
+        }
+        .qa-tab.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: var(--box-shadow-sm);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar (Rendered via JS) -->
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <div class="main-content">
+        <header class="header">
+            <h1 class="header-title">System Alerts (Cảnh báo Quản trị)</h1>
+        </header>
+        
+        <div class="project-board" style="padding-top: 15px;">
+            <div style="background: var(--surface-color); border-radius: 12px; box-shadow: var(--shadow); padding: 20px; max-width: 1200px; margin: 0 auto; display: flex; gap: 30px;">
+                
+                <!-- Tab Menu -->
+                <div style="width: 250px; border-right: 1px solid var(--border-color); padding-right: 10px;">
+                    <ul class="qa-tabs" id="alert-tabs">
+                        <li class="qa-tab active" data-tab="tab-missing-info">1. Thiếu thông tin cá nhân</li>
+                        <li class="qa-tab" data-tab="tab-orphans">2. Thành viên "Đi lạc"</li>
+                        <li class="qa-tab" data-tab="tab-dormant">3. Tài khoản Ngủ đông</li>
+                        <li class="qa-tab" data-tab="tab-bottleneck">4. Quá tải & Tắc nghẽn</li>
+                        <li class="qa-tab" data-tab="tab-role-audit">5. Kiểm toán Quyền hạn</li>
+                    </ul>
+                </div>
+
+                <!-- Tab Content -->
+                <div style="flex: 1; padding-left: 10px; position: relative;">
+                    
+                    <div id="loadingIndicator" style="text-align: center; color: var(--text-secondary); padding: 50px;">
+                        Đang quét dữ liệu toàn hệ thống...
+                    </div>
+                    
+                    <div id="tab-missing-info" class="qa-content active" style="display: none;">
+                        <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;">1. Thiếu thông tin cá nhân</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Danh sách các tài khoản thiếu Telegram ID hoặc chưa cập nhật họ tên. Cần nhắc nhở để hệ thống Auto Bot hoạt động hiệu quả.</p>
+                        <div id="list-missing-info" class="alert-list"></div>
+                    </div>
+
+                    <div id="tab-orphans" class="qa-content" style="display: none;">
+                        <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;">2. Thành viên "Đi lạc" (Orphaned)</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Danh sách các sinh viên đã có tài khoản trên hệ thống nhưng KHÔNG thuộc về bất kỳ dự án (nhóm) nào đang chạy.</p>
+                        <div id="list-orphans" class="alert-list"></div>
+                    </div>
+
+                    <div id="tab-dormant" class="qa-content" style="display: none;">
+                        <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;">3. Tài khoản Ngủ đông (Dormant)</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Thành viên có mặt trong nhóm nhưng không có tác động nào vào các đầu việc (Task) trong vòng hơn 14 ngày, hoặc chưa từng làm gì.</p>
+                        <div id="list-dormant" class="alert-list"></div>
+                    </div>
+
+                    <div id="tab-bottleneck" class="qa-content" style="display: none;">
+                        <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;">4. Quá tải & Tắc nghẽn</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Cảnh báo các cá nhân đang ôm đồm > 5 tasks "In Progress" cùng lúc, hoặc có task quá hạn hơn 7 ngày.</p>
+                        <div id="list-bottleneck" class="alert-list"></div>
+                    </div>
+
+                    <div id="tab-role-audit" class="qa-content" style="display: none;">
+                        <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;">5. Kiểm toán Quyền hạn (Role Audit)</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Danh sách tất cả những cá nhân đang nắm giữ quyền Super Admin hoặc Teacher. Yêu cầu rà soát để đảm bảo an ninh.</p>
+                        <div id="list-role-audit" class="alert-list"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="profile-modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3>Cập nhật thông tin</h3>
+                <button class="close-btn" id="close-profile-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Họ và Tên</label>
+                    <input type="text" id="profileName" placeholder="VD: Phạm Hà An">
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        Telegram ID
+                        <div class="tooltip-icon" id="telegramTooltipBtn">?</div>
+                    </label>
+                    <input type="text" id="profileTelegram" placeholder="VD: 123456789">
+                </div>
+                <div class="tooltip-box" id="telegramTooltipBox">
+                    <p style="margin: 0; font-size: 0.9em; line-height: 1.4;">Mở ứng dụng Telegram, tìm và mở đoạn chat với bot <strong>@userinfobot</strong> (nick có tick xanh). Nhấn Start để bắt đầu. Bot sẽ tự động trả về dãy số định danh ID chính là Chat ID cá nhân của bạn.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="save-profile-btn">Lưu thông tin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/sa-alerts.js"></script>
+</body>
+</html>

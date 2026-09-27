@@ -61,12 +61,28 @@ window.renderSidebar = async function(profile) {
                 <span class="nav-text">Templates</span>
             </a>
         `;
-    } else if (profile.role === 'student') {
+    
+          const isSaAlerts = window.location.pathname.includes('sa-alerts.html');
+          navHtml += `<a href="sa-alerts.html" title="System Alerts" class="nav-link ${isSaAlerts ? 'active' : ''}" style="opacity: ${isSaAlerts ? '1' : '0.7'};">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span class="nav-text" style="color: var(--status-danger); font-weight: 600;">Cảnh báo SA</span>
+          </a>`;
+      } else if (profile.role === 'student') {
         navHtml += `<a href="projects.html" title="Projects" class="nav-link ${isProj ? 'active' : ''}" style="opacity: ${isProj ? '1' : '0.7'};">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             <span class="nav-text">Projects</span>
         </a>`;
     }
+
+    const isQA = window.location.pathname.includes('qa.html');
+    navHtml += `<a href="qa.html" title="Q&A" class="nav-link ${isQA ? 'active' : ''}" style="opacity: ${isQA ? '1' : '0.7'};">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <span class="nav-text">Q&A</span>
+    </a>`;
 
     sidebar.innerHTML = `
         <div class="sidebar-header">
@@ -319,7 +335,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             <input type="text" id="profilePhone" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-primary);">
                         </div>
                         <div class="form-group">
-                            <label>Telegram ID</label>
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                            Telegram ID
+                            <span title="Mở ứng dụng Telegram, tìm và mở đoạn chat với bot @userinfobot (nick có tick xanh). Nhấn Start để bắt đầu. Bot sẽ tự động trả về dãy số định danh ID chính là Chat ID cá nhân của bạn." style="display: inline-flex; justify-content: center; align-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--text-secondary); color: var(--surface-color); font-size: 11px; cursor: help; font-weight: bold;">?</span>
+                        </label>
                             <input type="text" id="profileTeleId" placeholder="Ví dụ: @username" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-primary);">
                         </div>
                         <div class="form-group">

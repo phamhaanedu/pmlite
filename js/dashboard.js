@@ -396,13 +396,28 @@ async function loadTeacherDashboard() {
         usersSnap.forEach(u => {
             const data = u.data();
             if (data.role === 'student' || data.role === 'user') {
-                studentStats[u.id] = { name: data.fullName || data.email, commits: 0, completedTasks: 0 };
+                studentStats[u.id] = { name: data.fullName || data.email, commits: 0, completedTasks: 0, maxUpdatedAt: 0 };
             }
         });
         
         tasksSnap.forEach(tDoc => {
-            const task = tDoc.data();
-            if (task.isDeleted) return;
+              const task = tDoc.data();
+              if (task.isDeleted) return;
+
+              let tUpdateMs = 0;
+              if (task.updatedAt) {
+                  tUpdateMs = typeof task.updatedAt.toMillis === 'function' ? task.updatedAt.toMillis() : new Date(task.updatedAt).getTime();
+              } else if (task.createdAt) {
+                  tUpdateMs = typeof task.createdAt.toMillis === 'function' ? task.createdAt.toMillis() : new Date(task.createdAt).getTime();
+              }
+
+              if (task.assigneeIds) {
+                  task.assigneeIds.forEach(id => {
+                      if (studentStats[id] && tUpdateMs > studentStats[id].maxUpdatedAt) {
+                          studentStats[id].maxUpdatedAt = tUpdateMs;
+                      }
+                  });
+              }
             
             if (task.status === 'todo') todo++;
             else if (task.status === 'inprogress') inprogress++;
@@ -455,9 +470,7 @@ async function loadTeacherDashboard() {
         
         // 2. Leaderboard
         const lbContainer = document.getElementById('leaderboardContainer');
-        const sortedStudents = Object.values(studentStats)
-                                     .filter(s => s.commits > 0 || s.completedTasks > 0)
-                                     .sort((a, b) => (b.completedTasks * 10 + b.commits) - (a.completedTasks * 10 + a.commits));
+        const sortedStudents = Object.values(studentStats).sort((a, b) => (b.completedTasks * 10 + b.commits) - (a.completedTasks * 10 + a.commits));
                                      
         if (sortedStudents.length === 0) {
             lbContainer.innerHTML = '<p style="color: var(--text-secondary);">Chưa có dữ liệu sinh viên đóng góp.</p>';
@@ -472,11 +485,19 @@ async function loadTeacherDashboard() {
                 if (idx === 1) medal = '🥈';
                 if (idx === 2) medal = '🥉';
                 
-                item.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-weight: bold; width: 25px; text-align: center;">${medal}</span>
-                        <span style="font-weight: 500;">${st.name}</span>
-                    </div>
+                const now = new Date().getTime();
+                  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+                  let isAFK = false;
+                  if (now - st.maxUpdatedAt > FORTY_EIGHT_HOURS || st.maxUpdatedAt === 0) {
+                      isAFK = true;
+                  }
+                  let afkBadge = isAFK ? ` <span style="background: var(--status-danger); color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.7em; font-weight: bold; margin-left: 5px;">⚠️ Inactive > 48h</span>` : '';
+
+                  item.innerHTML = `
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                          <span style="font-weight: bold; width: 25px; text-align: center;">${medal}</span>
+                          <span style="font-weight: 500; display: flex; align-items: center;">${st.name} ${afkBadge}</span>
+                      </div>
                     <div style="text-align: right; font-size: 0.9em; color: var(--text-secondary);">
                         <span style="color: #4caf50; font-weight: 600;">${st.completedTasks} Tasks</span> | 
                         <span style="color: #2196f3; font-weight: 600;">${Math.round(st.commits)} Commits</span>

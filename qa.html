@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q&A - PM Lite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tabs-container {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+            padding-bottom: 5px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 10px 15px;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--border-radius-sm);
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: var(--background-color);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: var(--box-shadow-sm);
+        }
+
+        .qa-content-box {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: 30px;
+            box-shadow: var(--box-shadow-sm);
+            min-height: 400px;
+        }
+
+        .qa-content-box h2,
+        .qa-content-box h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        .qa-content-box ul,
+        .qa-content-box ol {
+            padding-left: 20px;
+            line-height: 1.6;
+        }
+
+        .qa-content-box p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .qa-tab-content {
+            display: none;
+        }
+
+        .qa-tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <main class="main-content">
+        <header class="header">
+            <h3 style="flex: 1; font-weight: 500;">Q&A - Hướng dẫn & Biểu mẫu</h3>
+        </header>
+
+        <div class="content-area" style="padding: 20px;">
+            <div style="max-width: 1200px; margin: 0 auto;">
+
+                <div class="tabs-container" id="tabsContainer">
+                    <button class="tab-btn active" data-target="tab1">Hướng dẫn sử dụng</button>
+                    <button class="tab-btn" data-target="tab2">Quy tắc dự án</button>
+                    <button class="tab-btn" data-target="tab3">Mẫu GDD</button>
+                    <button class="tab-btn" data-target="tab4">Hướng dẫn Use Case</button>
+                    <button class="tab-btn" data-target="tab5">Tham khảo tài liệu</button>
+                    <button class="tab-btn" data-target="tab6">Cấu trúc Slide bảo vệ</button>
+                    <button class="tab-btn" data-target="tab7">Mẫu Test Case</button>
+                </div>
+
+                <div class="qa-content-box">
+
+                    <!-- Tab 1 -->
+                    <div id="tab1" class="qa-tab-content active">
+                        <h2 style="margin-bottom: 20px;">Hướng dẫn sử dụng hệ thống quản lý dự án</h2>
+                        <h3>Quy trình 3 bước cốt lõi</h3>
+                        <ol>
+                            <li><b>Đăng nhập:</b> Sử dụng tài khoản Gmail được cấp quyền để truy cập vào hệ thống. Cập
+                                nhật mã sinh viên (MSSV), Họ tên, Số điện thoại, Telegram ID ngay khi đăng nhập lần đầu.
+                            </li>
+                            <li><b>Xem Dashboard:</b> Nắm bắt ngay "Hôm nay dự án nào đang cháy" thông qua bảng Công
+                                việc khẩn cấp (thể hiện các task Tới hạn hoặc Trễ hạn).</li>
+                            <li><b>Quản lý Task:</b> Chuyển sang Tab Projects -> Bấm vào tên Dự án -> Sử dụng Kanban
+                                Board hoặc Data Grid để kéo thả trạng thái.</li>
+                        </ol>
+                        <h3>Ý nghĩa Cảnh báo Màu sắc</h3>
+                        <ul>
+                            <li><span class="badge" style="background:#F44336;color:white;">Đỏ (Trễ hạn)</span>: Thời
+                                gian hiện tại đã vượt qua Deadline mà Task vẫn chưa Done.</li>
+                            <li><span class="badge" style="background:#F57C00;color:white;">Cam (Tới hạn)</span>: Task
+                                sẽ hết hạn trong ngày hôm nay hoặc ngày mai (Khoảng cách &lt;= 1 ngày).</li>
+                        </ul>
+                        <h3>Liên kết Git (Webhook)</h3>
+                        <p>Để hệ thống tự động ghi nhận tiến độ code, bạn hãy thêm ID của Task vào nội dung commit. Ví
+                            dụ: <code>git commit -m "fix character movement #T123"</code>. Hệ thống tự lấy ngày commit
+                            đầu tiên là startdate, lấy ngày commit có từ <code>complete</code> trong commit message làm
+                            enddate.</p>
+                    </div>
+
+                    <!-- Tab 2 -->
+                    <div id="tab2" class="qa-tab-content">
+                        <h2 style="margin-bottom: 20px;">Quy tắc chung làm dự án</h2>
+                        <h3>Quy tắc chung khi làm việc nhóm</h3>
+                        <ol>
+                            <li><b>Bảo vệ nhánh Main:</b> Tuyệt đối không push code trực tiếp lên nhánh
+                                <code>main</code> hoặc <code>master</code>. Hãy tạo nhánh mới (ví dụ:
+                                <code>feature/login</code>) và thực hiện Pull Request (PR) để người khác review.
+                            </li>
+                            <li><b>Không code "chui":</b> Mọi công việc (dù nhỏ nhất) đều phải được tạo thành một Task
+                                (Use Case) trên hệ thống trước khi bắt tay vào làm.</li>
+                            <li><b>Cập nhật trạng thái liên tục:</b> Kéo Task sang cột <b>In Progress</b> ngay khi bạn
+                                bắt đầu code, và kéo sang <b>Done</b> khi đã merge thành công. Đừng để dồn đến cuối tuần
+                                mới kéo một loạt.</li>
+                        </ol>
+                        <p>Việc tuân thủ quy tắc sẽ giúp Leader và Giảng viên đánh giá đúng nỗ lực của từng cá nhân.</p>
+                    </div>
+
+                    <!-- Tab 3 -->
+                    <div id="tab3" class="qa-tab-content">
+                        <h2 style="margin-bottom: 20px;">Mẫu Game Design Document (GDD)</h2>
+                        <h3>Cấu trúc Game Design Document (GDD) Cơ bản</h3>
+                        <p>Một tài liệu GDD tiêu chuẩn nên có các phần sau (Bạn có thể sao chép và đưa vào Google Docs
+                            của nhóm):</p>
+                        <table border="1" cellpadding="8" cellspacing="0"
+                            style="width:100%; border-color:var(--border-color); margin-top: 15px;">
+                            <tr>
+                                <td width="20%"><b>1. Tổng quan</b></td>
+                                <td>Tên Game, Thể loại (RPG, FPS...), Nền tảng (PC, Mobile), Đối tượng người chơi.</td>
+                            </tr>
+                            <tr>
+                                <td><b>2. Cốt truyện</b></td>
+                                <td>Bối cảnh thế giới, nhân vật chính, mục tiêu cuối cùng của người chơi là gì?</td>
+                            </tr>
+                            <tr>
+                                <td><b>3. Core Loop</b></td>
+                                <td>Vòng lặp cơ chế cốt lõi (Ví dụ: Đánh quái -> Nhận tiền -> Nâng cấp vũ khí -> Đánh
+                                    quái mạnh hơn).</td>
+                            </tr>
+                            <tr>
+                                <td><b>4. Entities</b></td>
+                                <td>Danh sách các loại Kẻ thù, Vật phẩm, Cấp độ (Levels), Kỹ năng.</td>
+                            </tr>
+                            <tr>
+                                <td><b>5. Giao diện (UI)</b></td>
+                                <td>Sơ đồ các màn hình: Main Menu, HUD trong game, Màn hình Pause, Màn hình Game Over.
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Tab 4 -->
+                    <div id="tab4" class="qa-tab-content">
+                        <h2 style="margin-bottom: 20px;">Hướng dẫn vẽ sơ đồ Use Case</h2>
+                        <h3>Quy chuẩn vẽ Sơ đồ Use Case</h3>
+                        <p>Sơ đồ Use Case giúp mô phỏng cách người dùng tương tác với hệ thống. Đối với Game, hãy chú ý
+                            các nguyên tắc sau:</p>
+                        <ul>
+                            <li><b>Actor (Tác nhân):</b> Hãy phân định rõ đâu là <i>Người chơi (Player)</i>, đâu là
+                                <i>Hệ thống (System)</i> hoặc <i>Máy chủ (Server)</i>.
+                            </li>
+                            <li><b>Tên Use Case:</b> Phải là một CỤM ĐỘNG TỪ. (Đúng: <i>Di chuyển nhân vật, Lưu game</i>
+                                | Sai: <i>Nhân vật, Màn hình lưu</i>).</li>
+                        </ul>
+                        <h3>Phân biệt <code>&lt;&lt;include&gt;&gt;</code> và <code>&lt;&lt;extend&gt;&gt;</code></h3>
+                        <ul>
+                            <li><code>&lt;&lt;include&gt;&gt;</code> (Bao gồm): Hành động BẮT BUỘC phải xảy ra để hoàn
+                                thành Use Case chính. (VD: Mua vật phẩm &lt;&lt;include&gt;&gt; Trừ tiền).</li>
+                            <li><code>&lt;&lt;extend&gt;&gt;</code> (Mở rộng): Hành động TÙY CHỌN, chỉ xảy ra ở một số
+                                trường hợp cụ thể. (VD: Đăng nhập &lt;&lt;extend&gt;&gt; Báo lỗi sai mật khẩu).</li>
+                        </ul>
+                    </div>
+
+                    <!-- Tab 5 -->
+                    <div id="tab5" class="qa-tab-content">
+                        <h2 style="margin-bottom: 20px;">Tham khảo Document</h2>
+                        <h3>Các nguồn tài nguyên hữu ích cho Game Developer</h3>
+                        <ul>
+                            <li><b>Tài liệu Lập trình:</b>
+                                <ul>
+                                    <li><a href="https://docs.unity3d.com/Manual/index.html" target="_blank"
+                                            style="color:var(--primary-color);">Unity Manual & Scripting API</a></li>
+                                    <li><a href="https://docs.godotengine.org/en/stable/" target="_blank"
+                                            style="color:var(--primary-color);">Godot Docs</a></li>
+                                </ul>
+                            </li>
+                            <li><b>Assets Miễn phí (2D/3D/Audio):</b>
+                                <ul>
+                                    <li><a href="https://kenney.nl/assets" target="_blank"
+                                            style="color:var(--primary-color);">Kenney.nl</a> - Kho tài nguyên Public
+                                        Domain chất lượng cao.</li>
+                                    <li><a href="https://itch.io/game-assets/free" target="_blank"
+                                            style="color:var(--primary-color);">Itch.io Free Assets</a> - Nhiều pack xịn
+                                        từ cộng đồng.</li>
+                                    <li><a href="https://mixamo.com" target="_blank"
+                                            style="color:var(--primary-color);">Mixamo</a> - Thư viện Animation 3D miễn
+                                        phí của Adobe.</li>
+                                </ul>
+                            </li>
+                            <li><b>Thiết kế Màn chơi (Level Design):</b>
+                                <ul>
+                                    <li><a href="https://www.worldofleveldesign.com/" target="_blank"
+                                            style="color:var(--primary-color);">World of Level Design</a> - Hướng dẫn bố
+                                        cục, ánh sáng.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Tab 6 -->
+                    <div id="tab6" class="qa-tab-content">
+                        <h2 style="margin-bottom: 20px;">Cấu trúc Slide bảo vệ</h2>
+                        <h3>Trọng tâm phần thuyết trình</h3>
+                        <p><b>Lưu ý quan trọng:</b> Hãy hạn chế nói chi tiết về cách chơi game. Thành viên hội đồng sẽ
+                            thấy điều đó khi bạn Demo. Hãy tập trung thuyết trình về <b>quy trình thực hiện</b> và các
+                            <b>con số thống kê</b> (Ví dụ: Dự án có bao nhiêu game object, thiết kế bao nhiêu chức
+                            năng...).
+                        </p>
+                        <ol>
+                            <li><b>Giới thiệu (1 slide):</b> Tên đề tài, danh sách thành viên nhóm.</li>
+                            <li><b>Lý do chọn đề tài (1 slide):</b> Xuất phát từ ý thích, khảo sát thực tế, hay chỉ số
+                                thị trường nào? Điểm độc đáo khác biệt (USP) của game là gì?</li>
+                            <li><b>Phân tích & Thiết kế (2 slides):</b> Trình bày quá trình phân tích thiết kế: GDD, Use
+                                Case, TDD, ERD, Core Loop, Lore Pillar. (Nhấn mạnh vào số lượng thành phần/chức năng đã
+                                phân tích).</li>
+                            <li><b>Tổ chức & Quản lý (1-2 slides):</b> Nhóm đã thực hiện và quản lý dự án như thế nào?
+                                Nêu rõ phương pháp, công cụ quản lý code, quá trình đồng bộ (merge/resolve conflict),
+                                quy trình kiểm thử và phát hành.</li>
+                            <li><b>Kết luận (1 slide):</b> Đánh giá ưu điểm, nhược điểm của sản phẩm hiện tại và kế
+                                hoạch phát triển tương lai. (Lưu ý, phần này phải là các tính năng cụ thể chưa có, tuyệt
+                                đối tránh tình trạng nói chung chung.)</li>
+                            <li><b>Q&A (1 slide):</b> Cảm ơn hội đồng và xin phép bắt đầu phần Demo Game.</li>
+                        </ol>
+                    </div>
+
+                    <!-- Tab 7 -->
+                    <div id="tab7" class="qa-tab-content">
+                        <h2 style="margin-bottom: 20px;">Mẫu Test Case</h2>
+                        <h3>Mẫu viết Test Case cơ bản</h3>
+                        <p>Thay vì test tự do, hãy lập bảng Test Case để kiểm thử kỹ lưỡng từng Use Case. Bạn có thể sử
+                            dụng mẫu sau trên Excel/Sheets:</p>
+                        <table border="1" cellpadding="8" cellspacing="0"
+                            style="width:100%; border-color:var(--border-color); margin-top: 15px;">
+                            <tr style="background: var(--background-color);">
+                                <th>Mã TC</th>
+                                <th>Chức năng</th>
+                                <th>Các bước thực hiện</th>
+                                <th>Kết quả mong đợi</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                            <tr>
+                                <td>TC01</td>
+                                <td>Di chuyển</td>
+                                <td>Nhấn giữ phím 'W'</td>
+                                <td>Nhân vật tiến lên phía trước với tốc độ 5m/s, animation chạy.</td>
+                                <td><span class="badge badge-success">Pass</span></td>
+                            </tr>
+                            <tr>
+                                <td>TC02</td>
+                                <td>Bắn súng</td>
+                                <td>Click chuột trái khi hết đạn</td>
+                                <td>Phát ra tiếng 'cạch cạch', không có đạn bay ra, báo hiệu đỏ ở UI.</td>
+                                <td><span class="badge badge-success">Pass</span></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/qa.js"></script>
+</body>
+
+</html>

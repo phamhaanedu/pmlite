@@ -5,6 +5,18 @@ const currentProjectId = urlParams.get('projectId');
 
 const headerProjectName = document.getElementById('headerProjectName');
 const taskListBody = document.getElementById('taskListBody');
+if (taskListBody) {
+    taskListBody.addEventListener('change', (e) => {
+        if (e.target.classList.contains('bulk-task-checkbox')) {
+            if (e.target.checked) {
+                selectedTasks.add(e.target.value);
+            } else {
+                selectedTasks.delete(e.target.value);
+            }
+            if (window.updateBulkActionBar) window.updateBulkActionBar();
+        }
+    });
+}
 const btnSaveAll = document.getElementById('btnSaveAll');
 const searchTaskInput = document.getElementById('searchTaskInput');
 
@@ -29,6 +41,7 @@ let currentProjectObj = null;
 let isPMUser = false; // PM or Admin/PO
 let allTasks = []; // Store tasks globally for view rendering
 let currentView = 'list'; // 'list' or 'kanban'
+let selectedTasks = new Set(); // For bulk operations
 
 // Wait for Firebase Auth to finish before fetching data
 document.addEventListener("UserLoaded", async (e) => {
@@ -186,6 +199,12 @@ async function loadProjectDetails() {
                 } else if (p.pmId === currentUserProfile.id || p.poId === currentUserProfile.id) {
                     isPMUser = true;
                 }
+            }
+            
+            // Update Select All Checkbox Visibility based on PM role
+            const selectAllCb = document.getElementById('selectAllTasksCheckbox');
+            if (selectAllCb) {
+                selectAllCb.style.display = isPMUser ? 'block' : 'none';
             }
             
             // Load Links & Description
@@ -629,19 +648,26 @@ function renderTaskTable(tasksArray) {
                 badgeHtml = `<span style="background: #F57C00; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.85em; margin-left: 5px;">Tới hạn</span>`;
             }
 
-            trMain.innerHTML = `
-                <td>
-                    <div style="font-size: 0.8em; color: var(--primary-color); font-weight: bold; margin-bottom: 3px;">
-                        ${displayId}
-                        ${badgeHtml}
-                    </div>
-                    <input type="text" class="grid-input edit-name" value="${t.name || ''}" data-original="${t.name || ''}" style="font-weight: 500; ${(isLate || isDueSoon) ? 'background: transparent;' : ''}">
-                    
-                    <div class="task-tags-container" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; min-height: 20px;">
-                        <!-- Tags will be rendered here -->
-                    </div>
-                    <input type="hidden" class="edit-tags" value='${tagsStr}' data-original='${tagsStr}'>
-                </td>
+            const checkboxHtml = (isPMUser && !t.isDeleted) ? `<input type="checkbox" class="bulk-task-checkbox" value="${t.id}" ${selectedTasks.has(t.id) ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0;">` : '';
+              
+              trMain.innerHTML = `
+                  <td>
+                      <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8em; color: var(--primary-color); font-weight: bold; margin-bottom: 3px;">
+                          ${checkboxHtml}
+                          <span>${displayId}</span>
+                          <svg class="copy-task-id-btn" data-id="${displayId}" title="Copy Task ID" style="cursor: pointer; width: 14px; height: 14px; color: var(--text-secondary); opacity: 0.7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                          ${badgeHtml}
+                      </div>
+                      <input type="text" class="grid-input edit-name" value="${t.name || ''}" data-original="${t.name || ''}" style="font-weight: 500; ${(isLate || isDueSoon) ? 'background: transparent;' : ''}">
+                      
+                      <div class="task-tags-container" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; min-height: 20px;">
+                          <!-- Tags will be rendered here -->
+                      </div>
+                      <input type="hidden" class="edit-tags" value='${tagsStr}' data-original='${tagsStr}'>
+                  </td>
                 <td>
                     <select class="grid-select edit-priority" data-original="${t.priority || 'medium'}">
                         <option value="urgent" ${t.priority === 'urgent' ? 'selected' : ''}>🔴 Khẩn cấp</option>
@@ -736,6 +762,38 @@ function renderTaskTable(tasksArray) {
                 });
             } else {
                 chipsContainer.style.cursor = 'default';
+            }
+
+            const copyBtn = trMain.querySelector('.copy-task-id-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', (e) => {
+                    const idToCopy = e.currentTarget.dataset.id;
+                    navigator.clipboard.writeText(idToCopy).then(() => {
+                        const originalColor = copyBtn.style.color;
+                        copyBtn.style.color = '#4CAF50';
+                        setTimeout(() => {
+                            copyBtn.style.color = originalColor;
+                        }, 1000);
+                        
+                        let toast = document.getElementById("copy-toast");
+                        if (!toast) {
+                            toast = document.createElement("div");
+                            toast.id = "copy-toast";
+                            toast.style.cssText = "position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #323232; color: #fff; padding: 10px 20px; border-radius: 4px; font-size: 14px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: opacity 0.3s; opacity: 0; pointer-events: none;";
+                            document.body.appendChild(toast);
+                        }
+                        toast.textContent = `Đã sao chép: ${idToCopy}`;
+                        toast.style.opacity = '1';
+                        
+                        if(window.copyToastTimeout) clearTimeout(window.copyToastTimeout);
+                        window.copyToastTimeout = setTimeout(() => {
+                            toast.style.opacity = '0';
+                        }, 1500);
+
+                    }).catch(err => {
+                        console.error('Could not copy text: ', err);
+                    });
+                });
             }
             
             // Render Tags
@@ -1096,6 +1154,18 @@ function filterTasks() {
     
     // 4. Filter Gantt Rows
     filterCards('.gantt-row', 'flex');
+    // 5. Unselect hidden tasks and update Bulk Action Bar
+    const allTaskRows = document.querySelectorAll("#taskListBody tr.main-row");
+    allTaskRows.forEach(row => {
+        if (row.style.display === "none") {
+            const cb = row.querySelector('.bulk-task-checkbox');
+            if (cb && cb.checked) {
+                cb.checked = false;
+                selectedTasks.delete(cb.value);
+            }
+        }
+    });
+    if (window.updateBulkActionBar) window.updateBulkActionBar();
 }
 
 function setupSearch() {
@@ -1960,7 +2030,7 @@ function renderOverviewView(tasksArray) {
     const memberStats = {};
 
     projectDevs.forEach(dev => {
-        memberStats[dev.id] = { name: dev.fullName, total: 0, done: 0 };
+        memberStats[dev.id] = { name: dev.fullName, total: 0, done: 0, maxUpdatedAt: 0 };
     });
     
     const today = new Date();
@@ -1978,10 +2048,20 @@ function renderOverviewView(tasksArray) {
 
         // Member Stats
         if (t.assigneeIds && t.assigneeIds.length > 0) {
+            let tUpdateMs = 0;
+            if (t.updatedAt) {
+                tUpdateMs = typeof t.updatedAt.toMillis === 'function' ? t.updatedAt.toMillis() : new Date(t.updatedAt).getTime();
+            } else if (t.createdAt) {
+                tUpdateMs = typeof t.createdAt.toMillis === 'function' ? t.createdAt.toMillis() : new Date(t.createdAt).getTime();
+            }
+
             t.assigneeIds.forEach(id => {
-                if (!memberStats[id]) memberStats[id] = { name: id, total: 0, done: 0 };
+                if (!memberStats[id]) memberStats[id] = { name: id, total: 0, done: 0, maxUpdatedAt: 0 };
                 memberStats[id].total++;
                 if (t.status === 'done') memberStats[id].done++;
+                if (tUpdateMs > memberStats[id].maxUpdatedAt) {
+                    memberStats[id].maxUpdatedAt = tUpdateMs;
+                }
             });
         }
 
@@ -2045,14 +2125,32 @@ function renderOverviewView(tasksArray) {
     if (statsArray.length === 0) {
         memberStatsContainer.innerHTML = '<span style="color: var(--text-secondary);">Chưa có thành viên nào.</span>';
     } else {
+        const now = new Date().getTime();
+        const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+        
         memberStatsContainer.innerHTML = statsArray.map(stat => {
             const pct = stat.total > 0 ? Math.round((stat.done / stat.total) * 100) : 0;
+            
+            // If they have tasks assigned, and their last update is older than 48h, or they have no tasks assigned
+            // Wait, if total == 0, they never took action. If total > 0 and maxUpdatedAt < now - 48h.
+            let isAFK = false;
+            if (stat.total === 0) {
+                isAFK = true;
+            } else if (now - stat.maxUpdatedAt > FORTY_EIGHT_HOURS) {
+                isAFK = true;
+            }
+
+            let afkBadge = isAFK ? ` <span style="background: var(--status-danger); color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.7em; font-weight: bold; margin-left: 5px;">⚠️ Inactive > 48h</span>` : '';
+
             return `
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--background-color); border-radius: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span class="min-avatar" style="width: 32px; height: 32px; font-size: 0.9em; background: white;">${stat.name.charAt(0)}</span>
                         <div style="display: flex; flex-direction: column;">
-                            <span style="font-weight: 500; font-size: 0.95em;">${stat.name}</span>
+                            <div style="display: flex; align-items: center;">
+                                <span style="font-weight: 500; font-size: 0.95em;">${stat.name}</span>
+                                ${afkBadge}
+                            </div>
                             <span style="font-size: 0.8em; color: var(--text-secondary);">${stat.done} / ${stat.total} Hoàn thành</span>
                         </div>
                     </div>
@@ -2111,3 +2209,88 @@ function renderOverviewView(tasksArray) {
         `;
     }
 }
+
+window.updateBulkActionBar = function() {
+    const bulkActionBar = document.getElementById('bulkActionBar');
+    const bulkSelectedCount = document.getElementById('bulkSelectedCount');
+    const selectAllCheckbox = document.getElementById('selectAllTasksCheckbox');
+    
+    if (!bulkActionBar || !bulkSelectedCount) return;
+    if (selectedTasks.size > 0) {
+        bulkActionBar.style.display = 'flex';
+        bulkSelectedCount.textContent = selectedTasks.size;
+    } else {
+        bulkActionBar.style.display = 'none';
+    }
+    
+    // Sync Select All checkbox state (only for VISIBLE rows in DOM)
+    if (selectAllCheckbox) {
+        const visibleCheckboxes = Array.from(document.querySelectorAll('.bulk-task-checkbox')).filter(cb => {
+            const tr = cb.closest('tr');
+            return tr && tr.style.display !== 'none';
+        });
+        
+        if (visibleCheckboxes.length > 0) {
+            const allChecked = visibleCheckboxes.every(cb => cb.checked);
+            selectAllCheckbox.checked = allChecked;
+        } else {
+            selectAllCheckbox.checked = false;
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const selectAllCheckbox = document.getElementById('selectAllTasksCheckbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            // Only select checkboxes in VISIBLE rows
+            const visibleCheckboxes = Array.from(document.querySelectorAll('.bulk-task-checkbox')).filter(cb => {
+                const tr = cb.closest('tr');
+                return tr && tr.style.display !== 'none';
+            });
+            
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+                if (isChecked) {
+                    selectedTasks.add(cb.value);
+                } else {
+                    selectedTasks.delete(cb.value);
+                }
+            });
+            window.updateBulkActionBar();
+        });
+    }
+
+    const btnBulkDelete = document.getElementById('btnBulkDelete');
+    if (btnBulkDelete) {
+        btnBulkDelete.addEventListener('click', async () => {
+            if (selectedTasks.size === 0) return;
+            if (confirm(`Bạn có chắc chắn muốn xóa ${selectedTasks.size} task đang được chọn? Thao tác này sẽ xóa mềm các task này.`)) {
+                try {
+                    btnBulkDelete.disabled = true;
+                    btnBulkDelete.innerText = "Đang xóa...";
+                    
+                    const batch = writeBatch(db);
+                    selectedTasks.forEach(taskId => {
+                        const taskRef = doc(db, "tasks", taskId);
+                        batch.update(taskRef, { isDeleted: true });
+                    });
+                    
+                    await batch.commit();
+                    if (window.logUserAction) window.logUserAction(`Đã xóa hàng loạt ${selectedTasks.size} tasks`);
+                    
+                    // Clear selection
+                    selectedTasks.clear();
+                    if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                    window.updateBulkActionBar();
+                } catch (error) {
+                    alert("Lỗi khi xóa hàng loạt: " + error.message);
+                } finally {
+                    btnBulkDelete.disabled = false;
+                    btnBulkDelete.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Xóa hàng loạt`;
+                }
+            }
+        });
+    }
+});
