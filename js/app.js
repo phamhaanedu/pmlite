@@ -145,6 +145,7 @@ window.renderSidebar = async function(profile) {
                 document.getElementById("profileMssv").value = profile.mssv || "";
                 document.getElementById("profilePhone").value = profile.phone || "";
                 document.getElementById("profileTeleId").value = profile.teleId || "";
+                document.getElementById("profileGithub").value = profile.githubUsername || "";
                 document.getElementById("profileEmail").value = profile.email || "";
                 
                 const btnSave = document.getElementById("btnSaveProfile");
@@ -341,6 +342,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         </label>
                             <input type="text" id="profileTeleId" placeholder="Ví dụ: @username" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-primary);">
                         </div>
+                        
+                        <div class="form-group">
+                            <label>GitHub Username</label>
+                            <input type="text" id="profileGithub" placeholder="Ví dụ: octocat" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-primary);">
+                        </div>
                         <div class="form-group">
                             <label>Email <small style="color: var(--text-secondary);">(Không thể thay đổi)</small></label>
                             <input type="email" id="profileEmail" readonly style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--surface-color); color: var(--text-secondary); opacity: 0.7;">
@@ -373,6 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const profileMssv = document.getElementById("profileMssv");
     const profilePhone = document.getElementById("profilePhone");
     const profileTeleId = document.getElementById("profileTeleId");
+    const profileGithub = document.getElementById("profileGithub");
     const btnSaveProfile = document.getElementById("btnSaveProfile");
 
     function checkProfileChanges() {
@@ -381,11 +388,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentMssv = profileMssv.value.trim();
         const currentPhone = profilePhone.value.trim();
         const currentTeleId = profileTeleId.value.trim();
+        const currentGithub = profileGithub ? profileGithub.value.trim() : "";
 
         const isChanged = currentFullName !== (currentUserProfile.fullName || "") ||
                           currentMssv !== (currentUserProfile.mssv || "") ||
                           currentPhone !== (currentUserProfile.phone || "") ||
-                          currentTeleId !== (currentUserProfile.teleId || "");
+                          currentTeleId !== (currentUserProfile.teleId || "") ||
+                          currentGithub !== (currentUserProfile.githubUsername || "");
 
         if (isChanged) {
             btnSaveProfile.disabled = false;
@@ -404,6 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (profileMssv) profileMssv.addEventListener("input", checkProfileChanges);
     if (profilePhone) profilePhone.addEventListener("input", checkProfileChanges);
     if (profileTeleId) profileTeleId.addEventListener("input", checkProfileChanges);
+    if (profileGithub) profileGithub.addEventListener("input", checkProfileChanges);
 
     const profileForm = document.getElementById("profileForm");
 
@@ -423,6 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const newMssv = document.getElementById("profileMssv").value.trim();
         const newPhone = document.getElementById("profilePhone").value.trim();
         const newTeleId = document.getElementById("profileTeleId").value.trim();
+        const newGithub = document.getElementById("profileGithub").value.trim();
 
         try {
             const userRef = doc(db, "users", currentUserProfile.id);
@@ -430,7 +441,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 fullName: newFullName,
                 mssv: newMssv,
                 phone: newPhone,
-                teleId: newTeleId
+                teleId: newTeleId,
+                githubUsername: newGithub
             });
 
             // Update local profile
@@ -438,6 +450,8 @@ document.addEventListener("DOMContentLoaded", () => {
             currentUserProfile.mssv = newMssv;
             currentUserProfile.phone = newPhone;
             currentUserProfile.teleId = newTeleId;
+            currentUserProfile.githubUsername = newGithub;
+            if(!currentUserProfile.githubOrgStatus) currentUserProfile.githubOrgStatus = "none";
 
             // Update UI
             const userNameSpan = document.getElementById("headerUserName");

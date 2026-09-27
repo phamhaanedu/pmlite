@@ -140,6 +140,24 @@
                             dụ: <code>git commit -m "fix character movement #T123"</code>. Hệ thống tự lấy ngày commit
                             đầu tiên là startdate, lấy ngày commit có từ <code>complete</code> trong commit message làm
                             enddate.</p>
+                        <h3>Cách tạo Cột mốc (Milestone) trên Gantt Chart</h3>
+                        <p>Hệ thống hỗ trợ tự động nhận diện các cột mốc quan trọng (Milestone) để hiển thị nổi bật trên
+                            biểu đồ Gantt. Bạn chỉ cần làm theo 1 trong các cách sau đối với 1 Task:</p>
+                        <ul>
+                            <li>Gắn thẻ Tag có chứa từ khóa <code>Milestone</code> vào Task.</li>
+                            <li>Đặt <code>Start Date</code> và <code>Deadline</code> trùng nhau, trùng mốc
+                                Milestones.</li>
+                            <li>Hoặc, đặt tên Task có chứa icon cờ <code>🚩</code> hoặc cụm từ <code>[CỘT MỐC]</code>
+                                (ví dụ: <em>🚩 [CỘT MỐC] Nộp bản Demo</em>).</li>
+                            <li>Thiết lập mức độ quan trọng là <code>Khẩn cấp</code>, trạng thái <code>Backlog</code>.
+                            </li>
+
+                        </ul>
+                        <p>Ngay lập tức, trên biểu đồ <b>Gantt</b>, hệ thống sẽ tự động biến Task này thành một khối
+                            hình thoi (Diamond) nổi bật thay vì thanh ngang thông thường. Đồng thời, một đường neo đứt
+                            nét dọc toàn bộ biểu đồ (Release Line) sẽ được thả xuống để mọi thành viên dễ dàng đối chiếu
+                            các tiến độ khác!</p>
+
                     </div>
 
                     <!-- Tab 2 -->

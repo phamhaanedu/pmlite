@@ -6,15 +6,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab Switching
     const tabs = document.querySelectorAll('.qa-tab');
     const contents = document.querySelectorAll('.qa-content');
-    
+
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             contents.forEach(c => c.style.display = 'none');
-            
+
             tab.classList.add('active');
             const target = document.getElementById(tab.getAttribute('data-tab'));
-            if(target) target.style.display = 'block';
+            if (target) target.style.display = 'block';
         });
     });
 
@@ -83,7 +83,7 @@ async function loadAlertsData() {
 
         // Hide loading
         const loader = document.getElementById('loadingIndicator');
-        if(loader) loader.style.display = 'none';
+        if (loader) loader.style.display = 'none';
         document.querySelector('.qa-content.active').style.display = 'block';
 
         // 1. Missing Info
@@ -98,6 +98,66 @@ async function loadAlertsData() {
                 if (!u.fullName) issues.push("Thiếu Họ và Tên");
                 return createListItem(u.fullName || u.email, `Email: ${u.email}`, issues.join(' | '));
             }).join('');
+
+            // 6. GitHub Org Requests
+            const githubOrgContainer = document.getElementById('list-github-org');
+            const pendingGithubUsers = users.filter(u => u.githubOrgStatus === 'pending');
+
+            if (pendingGithubUsers.length === 0) {
+                githubOrgContainer.innerHTML = '<div style="padding: 15px; color: var(--text-secondary); background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px;">Không có yêu cầu duyệt gia nhập Organization nào.</div>';
+            } else {
+                githubOrgContainer.innerHTML = pendingGithubUsers.map(u => {
+                    return `
+                    <div style="padding: 15px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="color: var(--text-primary); font-size: 0.95em;">${u.fullName || u.email}</strong>
+                            <div style="color: var(--text-secondary); font-size: 0.8em; margin-top: 3px;">GitHub Username: <strong style="color:var(--primary-color);">${u.githubUsername || 'N/A'}</strong></div>
+                        </div>
+                        <button class="btn-approve-github" data-uid="${u.id}" data-github="${u.githubUsername}" style="background: var(--primary-color); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">✅ Duyệt & Mời</button>
+                    </div>
+                `;
+                }).join('');
+
+                // Add Event Listeners for Approval
+                setTimeout(() => {
+                    document.querySelectorAll('.btn-approve-github').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            const uid = e.target.getAttribute('data-uid');
+                            const githubUser = e.target.getAttribute('data-github');
+                            if (!githubUser || githubUser === 'N/A') {
+                                alert("Sinh viên này chưa cung cấp Github Username!");
+                                return;
+                            }
+
+                            if (confirm(`Hệ thống sẽ tự động gửi email mời tài khoản "${githubUser}" vào Organization. Bạn có chắc không?`)) {
+                                e.target.innerHTML = 'Đang xử lý...';
+                                e.target.disabled = true;
+                                try {
+                                    // 1. Update Firestore
+                                    const { doc, updateDoc } = await import('./firebase-config.js');
+                                    const userRef = doc(db, 'users', uid);
+                                    await updateDoc(userRef, { githubOrgStatus: 'approved' });
+
+                                    // 2. Call GAS Webhook
+                                    const GAS_URL = "https://script.google.com/macros/s/AKfycbyaVjdmlIMh5E53XoURf9SX2Jf3zNyTRNcYIbZMGrYiLq96fiEE8V78FIbOtm3ibNqi7w/exec"; // Placeholder URL
+                                    // await fetch(GAS_URL + "?action=invite_github&secret=123", {
+                                    //     method: 'POST',
+                                    //     body: JSON.stringify({ githubUsername: githubUser }),
+                                    // });
+
+                                    alert(`Đã duyệt thành công cho tài khoản ${githubUser}!`);
+                                    e.target.parentElement.remove();
+                                } catch (err) {
+                                    console.error(err);
+                                    alert("Có lỗi xảy ra: " + err.message);
+                                    e.target.innerHTML = '✅ Duyệt & Mời';
+                                    e.target.disabled = false;
+                                }
+                            }
+                        });
+                    });
+                }, 500);
+            }
         }
 
         // 2. Orphaned Users
@@ -111,7 +171,7 @@ async function loadAlertsData() {
                 });
             }
         });
-        
+
         const orphanedUsers = users.filter(u => (u.role === 'student' || u.role === 'user') && userProjectMap[u.id] === 0);
         if (orphanedUsers.length === 0) {
             orphansContainer.innerHTML = '<div style="padding: 15px; color: var(--status-success); background: #e8f5e9; border-radius: 6px;">Không có sinh viên nào "đi lạc". Tất cả đều đã có nhóm.</div>';
@@ -125,10 +185,10 @@ async function loadAlertsData() {
         const dormantContainer = document.getElementById('list-dormant');
         const now = new Date().getTime();
         const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000;
-        
+
         const userActivityMap = {}; // userId -> maxUpdatedAt
         users.forEach(u => userActivityMap[u.id] = 0);
-        
+
         tasks.forEach(t => {
             if (t.isDeleted) return;
             let tUpdateMs = 0;
@@ -151,7 +211,7 @@ async function loadAlertsData() {
             if (u.role !== 'student' && u.role !== 'user') return false;
             // Only consider them dormant if they are in a project
             if (userProjectMap[u.id] === 0) return false;
-            
+
             return userActivityMap[u.id] === 0 || (now - userActivityMap[u.id] > FOURTEEN_DAYS);
         });
 
@@ -168,12 +228,12 @@ async function loadAlertsData() {
         const bottleneckContainer = document.getElementById('list-bottleneck');
         const userTaskStats = {};
         users.forEach(u => userTaskStats[u.id] = { inprogressCount: 0, overdueCount: 0 });
-        
+
         const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-        
+
         tasks.forEach(t => {
             if (t.isDeleted || t.status === 'done') return;
-            
+
             let isOverdueLong = false;
             if (t.deadline) {
                 const dl = new Date(t.deadline).getTime();
@@ -212,7 +272,7 @@ async function loadAlertsData() {
         // 5. Role Audit
         const auditContainer = document.getElementById('list-role-audit');
         const adminUsers = users.filter(u => u.role === 'super_admin' || u.role === 'teacher');
-        
+
         auditContainer.innerHTML = adminUsers.map(u => {
             let roleStr = u.role === 'super_admin' ? 'Super Admin' : 'Teacher';
             let bg = u.role === 'super_admin' ? '#d32f2f' : '#1976d2';
@@ -228,7 +288,7 @@ async function loadAlertsData() {
             `;
         }).join('');
 
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         document.getElementById('loadingIndicator').innerHTML = '<span style="color: red;">Lỗi tải dữ liệu. Hãy kiểm tra console.</span>';
     }

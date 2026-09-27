@@ -13,6 +13,7 @@ const newRole = document.getElementById("newRole");
 const newMssv = document.getElementById("newMssv");
 const newPhone = document.getElementById("newPhone");
 const newTelegramId = document.getElementById("newTelegramId");
+const newGithubUsername = document.getElementById("newGithubUsername");
 
 document.addEventListener("DOMContentLoaded", () => {
     loadUsers();
@@ -94,6 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
             newMssv.value = "";
             newPhone.value = "";
             if (newTelegramId) newTelegramId.value = "";
+            if (newGithubUsername) newGithubUsername.value = "";
+            if (newGithubUsername) newGithubUsername.value = "";
             
             if (window.logUserAction) window.logUserAction("Thêm thành viên mới");
             loadUsers(); // Refresh
@@ -122,6 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const mssvInput = row.querySelector(".edit-mssv").value.trim();
                 const phoneInput = row.querySelector(".edit-phone").value.trim();
                 const telegramIdInput = row.querySelector(".edit-telegramId") ? row.querySelector(".edit-telegramId").value.trim() : "";
+                const githubInput = row.querySelector(".edit-github") ? row.querySelector(".edit-github").value.trim() : "";
 
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(emailInput)) {
@@ -138,7 +142,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         role: roleInput,
                         mssv: mssvInput,
                         phone: phoneInput,
-                        telegramId: telegramIdInput
+                        telegramId: telegramIdInput,
+                        githubUsername: githubInput
                     });
                 }
             });
@@ -317,6 +322,7 @@ async function loadUsers() {
                         <input type="text" class="grid-input edit-mssv" value="${u.mssv || ''}" data-original="${u.mssv || ''}" placeholder="MSSV" style="flex: 1;">
                         <input type="text" class="grid-input edit-phone" value="${u.phone || ''}" data-original="${u.phone || ''}" placeholder="SĐT" style="flex: 1;">
                         <input type="text" class="grid-input edit-telegramId" value="${u.telegramId || ''}" data-original="${u.telegramId || ''}" placeholder="Telegram ID" style="flex: 1;">
+                        <input type="text" class="grid-input edit-github" value="${u.githubUsername || ''}" data-original="${u.githubUsername || ''}" placeholder="GitHub" style="flex: 1;">
                     </div>
                 </td>
                 <td>
@@ -380,6 +386,7 @@ async function loadUsers() {
                 const mssvInput = tr.querySelector(".edit-mssv").value.trim();
                 const phoneInput = tr.querySelector(".edit-phone").value.trim();
                 const telegramIdInput = tr.querySelector(".edit-telegramId") ? tr.querySelector(".edit-telegramId").value.trim() : "";
+                const githubInput = tr.querySelector(".edit-github") ? tr.querySelector(".edit-github").value.trim() : "";
                 
                 try {
                     // Check nếu email bị đổi thì có trùng email khác không
@@ -399,7 +406,8 @@ async function loadUsers() {
                         role: roleInput,
                         mssv: mssvInput,
                         phone: phoneInput,
-                        telegramId: telegramIdInput
+                        telegramId: telegramIdInput,
+                        githubUsername: githubInput
                     }, { merge: true });
                     
                     // Update originals
@@ -409,6 +417,7 @@ async function loadUsers() {
                     tr.querySelector(".edit-mssv").dataset.original = mssvInput;
                     tr.querySelector(".edit-phone").dataset.original = phoneInput;
                     if(tr.querySelector(".edit-telegramId")) tr.querySelector(".edit-telegramId").dataset.original = telegramIdInput;
+                    if(tr.querySelector(".edit-github")) tr.querySelector(".edit-github").dataset.original = githubInput;
                     
                     checkDirty(); // will remove dirty class
                     if (window.logUserAction) window.logUserAction("Cập nhật thông tin thành viên");

@@ -8,6 +8,59 @@ document.addEventListener("UserLoaded", async (e) => {
     if(profile) {
         const myProjects = await loadMyProjects(profile);
         await loadMyTasks(profile, myProjects);
+        // Check GitHub Org Status
+        const isPM = myProjects.some(p => p.isPM);
+        if (isPM) {
+            const orgStatus = profile.githubOrgStatus || 'none';
+            if (orgStatus === 'none' || orgStatus === 'pending') {
+                const bannerDiv = document.createElement("div");
+                bannerDiv.style.background = orgStatus === 'none' ? "var(--status-danger)" : "var(--status-warning)";
+                bannerDiv.style.color = "white";
+                bannerDiv.style.padding = "15px 20px";
+                bannerDiv.style.borderRadius = "var(--border-radius-md)";
+                bannerDiv.style.marginBottom = "20px";
+                bannerDiv.style.display = "flex";
+                bannerDiv.style.justifyContent = "space-between";
+                bannerDiv.style.alignItems = "center";
+                bannerDiv.style.boxShadow = "var(--box-shadow-sm)";
+                
+                let message = orgStatus === 'none' 
+                    ? "<strong>⚠️ Chú ý:</strong> Bạn là Quản lý dự án (PM) nhưng chưa tham gia không gian mã nguồn (GitHub). Vui lòng điền Username trong Profile và gửi yêu cầu." 
+                    : "<strong>⏳ Đang chờ duyệt:</strong> Yêu cầu gia nhập GitHub Organization của bạn đang được Admin xử lý.";
+                
+                let buttonHtml = orgStatus === 'none' 
+                    ? `<button id="btnRequestGithub" style="background: white; color: var(--status-danger); border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">🚀 Xin cấp Repo</button>` 
+                    : "";
+
+                bannerDiv.innerHTML = `<div>${message}</div> ${buttonHtml}`;
+                
+                const contentArea = document.querySelector(".content-area > div");
+                if (contentArea) contentArea.prepend(bannerDiv);
+
+                const btnRequest = document.getElementById("btnRequestGithub");
+                if (btnRequest) {
+                    btnRequest.addEventListener("click", async () => {
+                        if (!profile.githubUsername) {
+                            alert("Vui lòng cập nhật GitHub Username trong phần Thông tin cá nhân trước!");
+                            const profileModal = document.getElementById("profile-modal");
+                            if(profileModal) profileModal.classList.add("show");
+                            return;
+                        }
+                        try {
+                            const { updateDoc } = await import('./firebase-config.js');
+                            const userRef = doc(db, "users", profile.id);
+                            await updateDoc(userRef, { githubOrgStatus: 'pending' });
+                            alert("Đã gửi yêu cầu thành công. Vui lòng chờ duyệt!");
+                            window.location.reload();
+                        } catch (e) {
+                            console.error(e);
+                            alert("Có lỗi xảy ra: " + e.message);
+                        }
+                    });
+                }
+            }
+        }
+
         
         // Hiện Dashboard Giảng viên / Admin
         if (profile.role === 'teacher' || profile.role === 'super_admin') {

@@ -55,6 +55,7 @@
                         <li class="qa-tab" data-tab="tab-dormant">3. Tài khoản Ngủ đông</li>
                         <li class="qa-tab" data-tab="tab-bottleneck">4. Quá tải & Tắc nghẽn</li>
                         <li class="qa-tab" data-tab="tab-role-audit">5. Kiểm toán Quyền hạn</li>
+                        <li class="qa-tab" data-tab="tab-github-org">6. Duyệt GitHub Org</li>
                     </ul>
                 </div>
 
@@ -93,6 +94,12 @@
                         <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;">5. Kiểm toán Quyền hạn (Role Audit)</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Danh sách tất cả những cá nhân đang nắm giữ quyền Super Admin hoặc Teacher. Yêu cầu rà soát để đảm bảo an ninh.</p>
                         <div id="list-role-audit" class="alert-list"></div>
+                    </div>
+
+                    <div id="tab-github-org" class="qa-content" style="display: none;">
+                        <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px;">6. Duyệt GitHub Org</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Danh sách các sinh viên xin gia nhập GitHub Organization. Bạn cần cung cấp Webhook URL của Google Apps Script trong code để thực thi lệnh mời tự động.</p>
+                        <div id="list-github-org" class="alert-list"></div>
                     </div>
 
                 </div>

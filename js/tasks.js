@@ -1152,8 +1152,21 @@ function filterTasks() {
     // 3. Filter Matrix Cards
     filterCards('.matrix-card', 'flex');
     
-    // 4. Filter Gantt Rows
-    filterCards('.gantt-row', 'flex');
+    // 4. Re-render Gantt View dynamically based on filtered data (Auto-zooming time scale)
+    if (typeof allTasks !== 'undefined' && typeof renderGanttView === 'function') {
+        const filteredGanttTasks = allTasks.filter(t => {
+            const tText = (t.name || "").toLowerCase() + " " + (t.displayId || "").toLowerCase();
+            const matchKeyword = tText.includes(keyword);
+            const matchStatus = (statusVal === "all") || (t.status === statusVal);
+            const matchPriority = (priorityVal === "all") || (t.priority === (priorityVal === "Tru" ? "Tru" : priorityVal)); // priority matching is literal
+            const matchAssignee = (assigneeVal === "all") || (t.assigneeIds && t.assigneeIds.includes(assigneeVal));
+            const matchSprint = (sprintVal === "all") || (t.sprint === sprintVal);
+            const matchCategory = (categoryVal === "all") || (t.category === categoryVal);
+            const matchTag = (tagVal === "all") || (t.tags && t.tags.includes(tagVal));
+            return matchKeyword && matchStatus && matchPriority && matchAssignee && matchSprint && matchCategory && matchTag;
+        });
+        renderGanttView(filteredGanttTasks);
+    }
     // 5. Unselect hidden tasks and update Bulk Action Bar
     const allTaskRows = document.querySelectorAll("#taskListBody tr.main-row");
     allTaskRows.forEach(row => {
@@ -1906,7 +1919,6 @@ function renderGanttView(tasksArray) {
     
     body.innerHTML = '';
     
-    // Filter out tasks with no dates and done tasks if we want (let's keep done tasks for history)
     let tasksWithDates = tasksArray.filter(t => !t.isDeleted && (t.startDate || t.deadline || t.createdAt));
     
     if(tasksWithDates.length === 0) {
@@ -1915,15 +1927,12 @@ function renderGanttView(tasksArray) {
         return;
     }
     
-    // Find absolute min and max date
     let minTime = Infinity;
     let maxTime = -Infinity;
     
     tasksWithDates.forEach(t => {
         let start = t.startDate ? new Date(t.startDate).getTime() : (t.createdAt && t.createdAt.toDate ? t.createdAt.toDate().getTime() : Date.now());
-        let end = t.deadline ? new Date(t.deadline).getTime() : start + (24*60*60*1000); // default 1 day later
-        
-        // Fix inverted dates
+        let end = t.deadline ? new Date(t.deadline).getTime() : start + (24*60*60*1000); 
         if (end < start) end = start + (24*60*60*1000);
         
         t._startMs = start;
@@ -1933,31 +1942,72 @@ function renderGanttView(tasksArray) {
         if(end > maxTime) maxTime = end;
     });
     
-    // Add 10% padding to left and right
-    const padding = (maxTime - minTime) * 0.1 || (24*60*60*1000 * 5); // fallback 5 days padding
+    // Ensure "Today" is within the bounds so the red line always shows if relevant
+    const todayMs = Date.now();
+    if(todayMs < minTime) minTime = todayMs;
+    if(todayMs > maxTime) maxTime = todayMs;
+
+    const padding = (maxTime - minTime) * 0.05 || (24*60*60*1000 * 5);
     minTime -= padding;
     maxTime += padding;
     const totalMs = maxTime - minTime;
     
-    // Render Header dates
+    // Render Header dates (More detailed: Start, 25%, 50%, 75%, End)
     const dMin = new Date(minTime).toLocaleDateString('vi-VN');
+    const q1 = new Date(minTime + totalMs * 0.25).toLocaleDateString('vi-VN');
+    const q2 = new Date(minTime + totalMs * 0.5).toLocaleDateString('vi-VN');
+    const q3 = new Date(minTime + totalMs * 0.75).toLocaleDateString('vi-VN');
     const dMax = new Date(maxTime).toLocaleDateString('vi-VN');
-    header.innerHTML = `<div style="display:flex; justify-content:space-between; width: 100%; color: #999;">
-        <span>${dMin}</span>
-        <span>TIMELINE</span>
-        <span>${dMax}</span>
+    
+    header.innerHTML = `<div style="position: relative; width: 100%; color: #999; height: 20px; font-size: 0.9em;">
+        <span style="position: absolute; left: 0;">${dMin}</span>
+        <span style="position: absolute; left: 25%; transform: translateX(-50%);">${q1}</span>
+        <span style="position: absolute; left: 50%; transform: translateX(-50%);">${q2}</span>
+        <span style="position: absolute; left: 75%; transform: translateX(-50%);">${q3}</span>
+        <span style="position: absolute; right: 0;">${dMax}</span>
     </div>`;
 
-    // Sort by start date
     tasksWithDates.sort((a,b) => a._startMs - b._startMs);
+    
+    // Calculate Today's percentage
+    const todayPct = ((todayMs - minTime) / totalMs) * 100;
+    
+    // 1. Collect all milestones to draw vertical guide lines across all rows
+    const milestoneLinesData = [];
+    tasksWithDates.forEach(t => {
+        const isMilestone = (t.tags || []).some(tag => typeof tag === 'string' && tag.toLowerCase().includes('milestone')) || (t.name && (t.name.includes('🚩') || t.name.toLowerCase().includes('[cột mốc]')));
+        if (isMilestone) {
+            let mColor = '#2196F3'; 
+            if(t.status === 'done') mColor = '#4CAF50';
+            else if(t.status === 'inprogress') mColor = '#FF9800';
+            else if(t.status === 'backlog') mColor = '#9E9E9E';
+            
+            if (t.status !== 'done' && t.deadline) {
+                const dl = new Date(t.deadline); dl.setHours(0,0,0,0);
+                const td = new Date(); td.setHours(0,0,0,0);
+                const diffDays = Math.round((dl.getTime() - td.getTime()) / (1000 * 60 * 60 * 24));
+                if (diffDays < 0) mColor = '#F44336';
+                else if (diffDays <= 1) mColor = '#ff9800';
+            }
+            
+            // Milestone line is anchored at the end date (deadline) of the milestone
+            const mLeftPct = Math.max(0, ((t._endMs - minTime) / totalMs) * 100);
+            milestoneLinesData.push({ leftPct: mLeftPct, color: mColor });
+        }
+    });
+
+    // Generate HTML for all milestone vertical lines
+    const milestoneLinesHtml = milestoneLinesData.map(m => 
+        `<div style="position: absolute; left: ${m.leftPct}%; top: -12px; bottom: -12px; width: 2px; border-left: 1px dashed ${m.color}; opacity: 0.6; z-index: 4; pointer-events: none;"></div>`
+    ).join('');
+
 
     tasksWithDates.forEach(t => {
         const leftPct = Math.max(0, ((t._startMs - minTime) / totalMs) * 100);
         let widthPct = Math.max(1, ((t._endMs - t._startMs) / totalMs) * 100);
         if (leftPct + widthPct > 100) widthPct = 100 - leftPct;
         
-        
-        let color = '#2196F3'; // Todo
+        let color = '#2196F3'; 
         if(t.status === 'done') color = '#4CAF50';
         else if(t.status === 'inprogress') color = '#FF9800';
         else if(t.status === 'backlog') color = '#9E9E9E';
@@ -1971,17 +2021,13 @@ function renderGanttView(tasksArray) {
             today.setHours(0,0,0,0);
             const diffTime = dl.getTime() - today.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            if (diffDays < 0) {
-                isLate = true;
-            } else if (diffDays <= 1) {
-                isDueSoon = true;
-            }
+            if (diffDays < 0) isLate = true;
+            else if (diffDays <= 1) isDueSoon = true;
         }
         
         if(isLate) color = '#F44336';
         else if(isDueSoon) color = '#ff9800';
 
-        
         const row = document.createElement('div');
         row.className = 'gantt-row gantt-row-item';
         row.dataset.status = t.status;
@@ -1991,13 +2037,26 @@ function renderGanttView(tasksArray) {
         row.dataset.category = t.category || "";
         row.dataset.sprint = t.sprint || "";
         
-        
-        
-        
         const assigneesHtml = (t.assigneeIds || []).map(id => {
             const dev = projectDevs.find(d => d.id === id);
             return dev ? `<span title="${dev.fullName}" style="background: #e3f2fd; color: #1976d2; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.6em; font-weight: bold; border: 1px solid white; margin-left: -5px;">${dev.fullName.charAt(0)}</span>` : '';
         }).join('');
+
+        // The Today Line is a vertical red dashed line
+        const todayLineHtml = `<div style="position: absolute; left: ${todayPct}%; top: -12px; bottom: -12px; width: 2px; border-left: 2px dashed rgba(244, 67, 54, 0.6); z-index: 5; pointer-events: none;" title="Hôm nay"></div>`;
+
+        // Check if task is a Milestone
+        const isMilestone = (t.tags || []).some(tag => typeof tag === 'string' && tag.toLowerCase().includes('milestone')) || (t.name && (t.name.includes('🚩') || t.name.toLowerCase().includes('[cột mốc]')));
+        
+        let barHtml = '';
+        if (isMilestone) {
+            // Milestone: Diamond shape
+            const endPct = Math.max(0, ((t._endMs - minTime) / totalMs) * 100);
+            barHtml = `<div class="gantt-bar" style="position: absolute; left: calc(${endPct}% - 7px); width: 14px; height: 14px; background: ${color}; top: -1px; transform: rotate(45deg); z-index: 11; box-shadow: 0 0 5px ${color}; border: 2px solid white;" title="CỘT MỐC: ${new Date(t._endMs).toLocaleDateString()}"></div>`;
+        } else {
+            // Normal task: Bar shape
+            barHtml = `<div class="gantt-bar" style="position: absolute; left: ${leftPct}%; width: ${widthPct}%; background: ${color}; z-index: 10;" title="Từ ${new Date(t._startMs).toLocaleDateString()} đến ${new Date(t._endMs).toLocaleDateString()}"></div>`;
+        }
 
         row.innerHTML = `
             <div class="gantt-label" title="${t.name}">
@@ -2005,13 +2064,14 @@ function renderGanttView(tasksArray) {
                 ${t.name}
                 <div style="display:flex; margin-left: auto; padding-right: 5px;">${assigneesHtml}</div>
             </div>
-            <div class="gantt-timeline-bg">
-                <div class="gantt-bar" style="position: absolute; left: ${leftPct}%; width: ${widthPct}%; background: ${color};" title="Từ ${new Date(t._startMs).toLocaleDateString()} đến ${new Date(t._endMs).toLocaleDateString()}"></div>
+            <div class="gantt-timeline-bg" style="position: relative;">
+                ${milestoneLinesHtml}
+                ${todayLineHtml}
+                ${barHtml}
             </div>
         `;
         
         row.addEventListener('click', () => openKanbanModal(t.id));
-        
         body.appendChild(row);
     });
 }
